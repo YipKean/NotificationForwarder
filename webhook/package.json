@@ -1,11 +1,12 @@
 {
   "name": "webhook-api",
   "version": "1.0.0",
-  "description": "Webhook receiver API with bearer authentication and file logging",
+  "description": "Minimal authenticated webhook receipt API",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "dev": "node --watch server.js"
+    "dev": "node --watch server.js",
+    "test": "node --test"
   },
   "keywords": [
     "webhook",
@@ -17,5 +18,8 @@
   "dependencies": {
     "dotenv": "^16.6.1",
     "express": "^4.19.2"
+  },
+  "overrides": {
+    "qs": "^6.16.0"
   }
 }

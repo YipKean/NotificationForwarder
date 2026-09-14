@@ -5,6 +5,8 @@ import android.provider.Settings
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 import com.itsazni.notificationforwarder.data.NotificationRepository
+import com.itsazni.notificationforwarder.network.PreparedWebhookRequest
+import com.itsazni.notificationforwarder.network.SendResult
 import com.itsazni.notificationforwarder.network.WebhookClient
 import com.itsazni.notificationforwarder.settings.AuthMode
 import com.itsazni.notificationforwarder.settings.SettingsStore
@@ -18,55 +20,112 @@ class QueueWorker(
     private val settings = SettingsStore(appContext)
     private val webhookClient = WebhookClient()
 
-    override suspend fun doWork(): Result {
-        val config = settings.readAll()
-        if (!config.forwardingEnabled || config.webhookUrl.isBlank()) {
+    override suspend fun doWork(): Result = DeliveryCoordinator.withDelivery { doWorkInternal() }
+
+    private suspend fun doWorkInternal(): Result {
+        repository.recoverSending()
+        repository.purgeExpired()
+        DeliveryCoordinator.withState {
+            repository.recalculateRetentionLocked(settings.readAll().retentionHours)
+        }
+        val initial = settings.readAll()
+        if (!initial.forwardingEnabled || initial.webhookUrl.isBlank()) {
             return Result.success()
         }
 
-        val items = repository.getPending(config.batchSize)
-        if (items.isEmpty()) {
+        val itemIds = repository.getPending(initial.batchSize).map { it.id }
+        if (itemIds.isEmpty()) {
             return Result.success()
         }
 
-        repository.markSending(items.map { it.id })
-        val deviceId = Settings.Secure.getString(
-            applicationContext.contentResolver,
-            Settings.Secure.ANDROID_ID
-        ) ?: "unknown-device"
-
-        val headers = buildHeaders(config.authMode, config.bearerToken, settings.parseHeaders())
-        val queryParams = settings.parseQueryParams()
-
+        repository.markSending(itemIds)
         var shouldRetry = false
-        items.forEach { item ->
-            val result = webhookClient.send(
-                url = config.webhookUrl,
-                method = config.webhookMethod,
-                headers = headers,
-                queryParams = queryParams,
-                payloadTemplate = config.payloadTemplateRaw,
-                item = item,
-                deviceId = deviceId
-            )
-            if (result.success) {
-                repository.markSent(item.id)
-            } else {
-                val attempt = item.attemptCount + 1
-                repository.markFailure(
-                    id = item.id,
-                    attemptCount = if (result.isPermanentFailure) config.maxRetries else attempt,
-                    maxRetry = config.maxRetries,
-                    lastError = result.message
-                )
-                if (!result.isPermanentFailure) {
-                    shouldRetry = true
+        itemIds.forEach { id ->
+            val plan = DeliveryCoordinator.withState {
+                val current = settings.readAll()
+                val item = repository.getForDeliveryLocked(id)
+                if (item == null) {
+                    return@withState null
                 }
+                if (!current.forwardingEnabled ||
+                    current.policyRevision != item.policyRevision ||
+                    !current.filterPackages.contains(item.payload.packageName)
+                ) {
+                    repository.deleteQueueItemLocked(id)
+                    return@withState null
+                }
+                if (repository.expireIfNeededLocked(
+                        id = item.id,
+                        createdAt = item.createdAt,
+                        retentionHours = current.retentionHours,
+                        now = System.currentTimeMillis()
+                    )
+                ) {
+                    return@withState null
+                }
+
+                val prepared = webhookClient.prepare(
+                    url = current.webhookUrl,
+                    method = current.webhookMethod,
+                    headers = buildHeaders(current.authMode, current.bearerToken, settings.parseHeaders(current.customHeadersRaw)),
+                    queryParams = settings.parseQueryParams(current.queryParamsRaw),
+                    payloadTemplate = current.payloadTemplateRaw,
+                    item = item.payload,
+                    deviceId = deviceId()
+                )
+                when (prepared) {
+                    is PreparedWebhookRequest.Ready -> {
+                        DeliveryCoordinator.registerCallLocked(id, prepared.call)
+                        DeliveryPlan.Ready(prepared, current.maxRetries, item.attemptCount)
+                    }
+                    is PreparedWebhookRequest.Rejected -> DeliveryPlan.Rejected(prepared.result, current.maxRetries, item.attemptCount)
+                }
+            }
+
+            when (plan) {
+                is DeliveryPlan.Ready -> {
+                    val result = try {
+                        webhookClient.execute(plan.request)
+                    } finally {
+                        DeliveryCoordinator.unregisterCall(id, plan.request.call)
+                    }
+                    if (result.success) {
+                        repository.markSent(id)
+                    } else {
+                        val attempt = plan.attemptCount + 1
+                        repository.markFailure(
+                            id = id,
+                            attemptCount = if (result.isPermanentFailure) plan.maxRetries else attempt,
+                            maxRetry = plan.maxRetries,
+                            errorCode = result.message
+                        )
+                        if (!result.isPermanentFailure) {
+                            shouldRetry = true
+                        }
+                    }
+                }
+                is DeliveryPlan.Rejected -> {
+                    repository.markFailure(
+                        id = id,
+                        attemptCount = if (plan.result.isPermanentFailure) plan.maxRetries else plan.attemptCount + 1,
+                        maxRetry = plan.maxRetries,
+                        errorCode = plan.result.message
+                    )
+                    if (!plan.result.isPermanentFailure) {
+                        shouldRetry = true
+                    }
+                }
+                null -> Unit
             }
         }
 
         return if (shouldRetry) Result.retry() else Result.success()
     }
+
+    private fun deviceId(): String = Settings.Secure.getString(
+        applicationContext.contentResolver,
+        Settings.Secure.ANDROID_ID
+    ) ?: "unknown-device"
 
     private fun buildHeaders(
         authMode: AuthMode,
@@ -79,5 +138,10 @@ class QueueWorker(
         }
         finalHeaders.putAll(customHeaders)
         return finalHeaders
+    }
+
+    private sealed interface DeliveryPlan {
+        data class Ready(val request: PreparedWebhookRequest.Ready, val maxRetries: Int, val attemptCount: Int) : DeliveryPlan
+        data class Rejected(val result: SendResult, val maxRetries: Int, val attemptCount: Int) : DeliveryPlan
     }
 }

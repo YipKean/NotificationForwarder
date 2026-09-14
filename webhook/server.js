@@ -1,44 +1,24 @@
+const crypto = require("crypto");
 const express = require("express");
-const fs = require("fs/promises");
-const path = require("path");
 require("dotenv").config();
 
 const app = express();
-
-const HOST = process.env.HOST || "0.0.0.0";
+const HOST = process.env.HOST || "127.0.0.1";
 const PORT = Number(process.env.PORT) || 3000;
 const WEBHOOK_PATH = process.env.WEBHOOK_PATH || "/webhook";
 const BEARER_TOKEN = process.env.WEBHOOK_BEARER_TOKEN || "";
-const LOG_FILE = process.env.WEBHOOK_LOG_FILE || path.join(process.cwd(), "logs", "webhook.log");
 const JSON_LIMIT = process.env.JSON_LIMIT || "1mb";
 
-app.use(express.json({ limit: JSON_LIMIT }));
-
-async function appendLog(logEntry) {
-  const logDir = path.dirname(LOG_FILE);
-  await fs.mkdir(logDir, { recursive: true });
-  await fs.appendFile(LOG_FILE, `${JSON.stringify(logEntry)}\n`, "utf8");
-}
-
 function requireBearerAuth(req, res, next) {
-  if (!BEARER_TOKEN) {
-    return next();
-  }
-
   const authHeader = req.get("authorization") || "";
-  if (!authHeader.startsWith("Bearer ")) {
-    return res.status(401).json({
-      ok: false,
-      message: "Authorization header must use Bearer <token> format.",
-    });
+  if (!BEARER_TOKEN || !authHeader.startsWith("Bearer ")) {
+    return res.status(401).json({ ok: false, message: "Unauthorized.", code: "unauthorized" });
   }
 
-  const token = authHeader.slice(7).trim();
-  if (token !== BEARER_TOKEN) {
-    return res.status(403).json({
-      ok: false,
-      message: "Invalid bearer token.",
-    });
+  const suppliedDigest = crypto.createHash("sha256").update(authHeader.slice(7).trim()).digest();
+  const expectedDigest = crypto.createHash("sha256").update(BEARER_TOKEN).digest();
+  if (!crypto.timingSafeEqual(suppliedDigest, expectedDigest)) {
+    return res.status(403).json({ ok: false, message: "Forbidden.", code: "forbidden" });
   }
 
   return next();
@@ -48,48 +28,38 @@ app.get("/health", (req, res) => {
   res.json({ ok: true, service: "webhook-api" });
 });
 
-app.post(WEBHOOK_PATH, requireBearerAuth, async (req, res) => {
-  try {
-    const { authorization: _authorization, ...safeHeaders } = req.headers;
+app.post(WEBHOOK_PATH, requireBearerAuth, express.json({ limit: JSON_LIMIT }), (req, res) => {
+  const receiptId = crypto.randomUUID();
+  const receivedAt = new Date().toISOString();
+  console.log(JSON.stringify({ receiptId, receivedAt, outcome: "accepted" }));
+  return res.status(200).json({ ok: true, message: "Webhook received.", receiptId });
+});
 
-    const entry = {
-      receivedAt: new Date().toISOString(),
-      method: req.method,
-      path: req.originalUrl,
-      ip: req.ip,
-      headers: safeHeaders,
-      body: req.body,
-    };
-
-    await appendLog(entry);
-
-    return res.status(200).json({
-      ok: true,
-      message: "Webhook received.",
-    });
-  } catch (error) {
-    return res.status(500).json({
-      ok: false,
-      message: "Failed to write webhook log.",
-      error: error.message,
-    });
-  }
+app.use((req, res) => {
+  res.status(404).json({ ok: false, message: "Not found.", code: "not_found" });
 });
 
 app.use((err, req, res, next) => {
-  if (err instanceof SyntaxError && "body" in err) {
-    return res.status(400).json({
-      ok: false,
-      message: "Invalid JSON body.",
-    });
+  if (err && err.type === "entity.too.large") {
+    return res.status(413).json({ ok: false, message: "Request too large.", code: "request_too_large" });
   }
-
-  return next(err);
+  if (err instanceof SyntaxError && "body" in err) {
+    return res.status(400).json({ ok: false, message: "Invalid JSON body.", code: "invalid_json" });
+  }
+  return res.status(500).json({ ok: false, message: "Internal server error.", code: "internal_error" });
 });
 
-app.listen(PORT, HOST, () => {
-  console.log(`Webhook API running on http://${HOST}:${PORT}`);
-  console.log(`Endpoint webhook: POST ${WEBHOOK_PATH}`);
-  console.log(BEARER_TOKEN ? "Bearer auth: enabled" : "Bearer auth: disabled (no token configured)");
-  console.log(`Log file: ${LOG_FILE}`);
-});
+function start() {
+  if (!BEARER_TOKEN) {
+    console.error("WEBHOOK_BEARER_TOKEN is required");
+    process.exitCode = 1;
+    return null;
+  }
+  return app.listen(PORT, HOST);
+}
+
+if (require.main === module) {
+  start();
+}
+
+module.exports = { app, start };

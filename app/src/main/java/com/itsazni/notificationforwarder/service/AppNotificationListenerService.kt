@@ -5,6 +5,8 @@ import android.os.Build
 import android.service.notification.NotificationListenerService
 import android.service.notification.StatusBarNotification
 import com.itsazni.notificationforwarder.data.NotificationRepository
+import com.itsazni.notificationforwarder.settings.FilterMode
+import com.itsazni.notificationforwarder.settings.SettingsStore
 import com.itsazni.notificationforwarder.worker.WorkerScheduler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -30,6 +32,16 @@ class AppNotificationListenerService : NotificationListenerService() {
             return
         }
 
+        val repository = NotificationRepository(applicationContext)
+        val settings = SettingsStore(applicationContext).readAll()
+        if (!settings.forwardingEnabled || settings.filterMode != FilterMode.WHITELIST ||
+            !settings.filterPackages.contains(item.packageName) || settings.webhookUrl.isBlank()
+        ) {
+            return
+        }
+        val capturedPolicyRevision = settings.policyRevision
+        val capturedAt = System.currentTimeMillis()
+
         val notification: Notification = item.notification
         val extras = notification.extras
         val title = extras?.getCharSequence(Notification.EXTRA_TITLE)?.toString().orEmpty()
@@ -41,14 +53,15 @@ class AppNotificationListenerService : NotificationListenerService() {
         }
 
         serviceScope.launch {
-            val repository = NotificationRepository(applicationContext)
             repository.enqueue(
                 packageName = item.packageName,
                 appName = resolveAppName(item.packageName),
                 title = title,
                 text = text,
                 postedAt = item.postTime,
-                notificationKey = item.key
+                notificationKey = item.key,
+                capturedPolicyRevision = capturedPolicyRevision,
+                capturedAt = capturedAt
             )
             WorkerScheduler.enqueueImmediate(applicationContext)
         }

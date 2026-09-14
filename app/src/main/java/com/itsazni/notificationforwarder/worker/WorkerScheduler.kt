@@ -14,6 +14,8 @@ import java.util.concurrent.TimeUnit
 object WorkerScheduler {
     private const val QUEUE_SYNC_WORK = "queue_sync_work"
     private const val QUEUE_PERIODIC_WORK = "queue_periodic_work"
+    private const val QUEUE_CLEANUP_WORK = "queue_cleanup_work"
+    private const val DELIVERY_TAG = "notification_delivery"
 
     fun enqueueImmediate(context: Context) {
         val constraints = Constraints.Builder()
@@ -23,6 +25,7 @@ object WorkerScheduler {
         val request = OneTimeWorkRequestBuilder<QueueWorker>()
             .setConstraints(constraints)
             .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 30, TimeUnit.SECONDS)
+            .addTag(DELIVERY_TAG)
             .build()
 
         WorkManager.getInstance(context).enqueueUniqueWork(
@@ -39,6 +42,7 @@ object WorkerScheduler {
 
         val periodic = PeriodicWorkRequestBuilder<QueueWorker>(15, TimeUnit.MINUTES)
             .setConstraints(constraints)
+            .addTag(DELIVERY_TAG)
             .build()
 
         WorkManager.getInstance(context).enqueueUniquePeriodicWork(
@@ -46,5 +50,17 @@ object WorkerScheduler {
             ExistingPeriodicWorkPolicy.KEEP,
             periodic
         )
+
+        val cleanup = PeriodicWorkRequestBuilder<QueueCleanupWorker>(15, TimeUnit.MINUTES)
+            .build()
+        WorkManager.getInstance(context).enqueueUniquePeriodicWork(
+            QUEUE_CLEANUP_WORK,
+            ExistingPeriodicWorkPolicy.KEEP,
+            cleanup
+        )
+    }
+
+    fun cancelDelivery(context: Context) {
+        WorkManager.getInstance(context).cancelAllWorkByTag(DELIVERY_TAG)
     }
 }

@@ -6,6 +6,7 @@ import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
 import android.os.PowerManager
+import android.view.WindowManager
 import android.provider.Settings
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -60,15 +61,18 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.itsazni.notificationforwarder.data.NotificationRepository
-import com.itsazni.notificationforwarder.data.QueueItem
+import com.itsazni.notificationforwarder.data.NotificationPayload
+import com.itsazni.notificationforwarder.data.QueueEntry
 import com.itsazni.notificationforwarder.data.QueueStats
 import com.itsazni.notificationforwarder.data.QueueStatus
 import com.itsazni.notificationforwarder.network.WebhookClient
 import com.itsazni.notificationforwarder.settings.AppSettings
 import com.itsazni.notificationforwarder.settings.AuthMode
 import com.itsazni.notificationforwarder.settings.FilterMode
+import com.itsazni.notificationforwarder.settings.SettingsSaveResult
 import com.itsazni.notificationforwarder.settings.SettingsStore
 import com.itsazni.notificationforwarder.ui.theme.AppTheme
+import com.itsazni.notificationforwarder.worker.DeliveryCoordinator
 import com.itsazni.notificationforwarder.worker.WorkerScheduler
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -80,6 +84,8 @@ private enum class AppTab(val label: String, val icon: ImageVector) {
     FILTER("Filter", Icons.Filled.Tune),
     QUEUE("Queue", Icons.AutoMirrored.Filled.List)
 }
+
+private const val TEST_CALL_ID = Long.MIN_VALUE
 
 private data class UiSettings(
     val webhookUrl: String,
@@ -93,7 +99,8 @@ private data class UiSettings(
     val queryParamsRaw: String,
     val payloadTemplateRaw: String,
     val maxRetriesRaw: String,
-    val batchSizeRaw: String
+    val batchSizeRaw: String,
+    val retentionRaw: String
 )
 
 private fun AppSettings.toUiSettings(): UiSettings {
@@ -109,13 +116,15 @@ private fun AppSettings.toUiSettings(): UiSettings {
         queryParamsRaw = queryParamsRaw,
         payloadTemplateRaw = payloadTemplateRaw,
         maxRetriesRaw = maxRetries.toString(),
-        batchSizeRaw = batchSize.toString()
+        batchSizeRaw = batchSize.toString(),
+        retentionRaw = retentionHours?.toString() ?: "OFF"
     )
 }
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        window.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
         val settingsStore = SettingsStore(this)
 
         setContent {
@@ -176,33 +185,67 @@ private fun MainScreen(settingsStore: SettingsStore) {
                 uiSettings = uiSettings,
                 onSettingsChange = { uiSettings = it },
                 onSave = {
-                    saveSettings(settingsStore, uiSettings)
-                    WorkerScheduler.enqueueImmediate(context)
-                    scope.launch { snackbarHostState.showSnackbar("Webhook settings saved") }
+                    scope.launch {
+                        val result = saveSettingsCoordinated(context, settingsStore, repository, uiSettings)
+                        if (!result.success) {
+                            snackbarHostState.showSnackbar("Settings not saved: ${result.errorCode}")
+                            return@launch
+                        }
+                        if (result.policyChanged) {
+                            uiSettings = uiSettings.copy(forwardingEnabled = false)
+                            snackbarHostState.showSnackbar("Settings changed; forwarding disabled and queue cleared")
+                        } else if (result.retentionChanged) {
+                            snackbarHostState.showSnackbar("Retention updated")
+                        } else {
+                            WorkerScheduler.enqueueImmediate(context)
+                            snackbarHostState.showSnackbar(
+                                if (settingsStore.forwardingEnabled) "Webhook settings saved"
+                                else "Settings saved; forwarding remains disabled until a valid HTTPS endpoint and allowlist are configured."
+                            )
+                        }
+                    }
                 },
                 onTestWebhook = {
                     scope.launch {
                         val result = withContext(Dispatchers.IO) {
-                            WebhookClient().send(
-                                url = uiSettings.webhookUrl,
-                                method = uiSettings.webhookMethod,
-                                headers = buildHeadersPreview(
-                                    authMode = uiSettings.authMode,
-                                    token = uiSettings.bearerToken,
-                                    customHeadersRaw = uiSettings.customHeadersRaw
-                                ),
-                                queryParams = parseKeyValuePairs(uiSettings.queryParamsRaw),
-                                payloadTemplate = uiSettings.payloadTemplateRaw,
-                                item = QueueItem(
-                                    packageName = "com.test.package",
-                                    appName = "Webhook Test",
-                                    title = "Test Notification",
-                                    text = "This is a test payload",
-                                    postedAt = System.currentTimeMillis(),
-                                    notificationKey = "test-${System.currentTimeMillis()}"
-                                ),
-                                deviceId = "test-device"
-                            )
+                            val client = WebhookClient()
+                            val prepared = DeliveryCoordinator.withState {
+                                client.prepare(
+                                    url = uiSettings.webhookUrl,
+                                    method = uiSettings.webhookMethod,
+                                    headers = buildHeadersPreview(
+                                        authMode = uiSettings.authMode,
+                                        token = uiSettings.bearerToken,
+                                        customHeadersRaw = uiSettings.customHeadersRaw
+                                    ),
+                                    queryParams = parseKeyValuePairs(uiSettings.queryParamsRaw),
+                                    payloadTemplate = uiSettings.payloadTemplateRaw,
+                                    item = NotificationPayload(
+                                        packageName = "com.test.package",
+                                        appName = "Webhook Test",
+                                        title = "Test Notification",
+                                        text = "This is a test payload",
+                                        postedAt = System.currentTimeMillis(),
+                                        notificationKey = "test-${System.currentTimeMillis()}"
+                                    ),
+                                    deviceId = "test-device"
+                                ).also { request ->
+                                    if (request is com.itsazni.notificationforwarder.network.PreparedWebhookRequest.Ready) {
+                                        DeliveryCoordinator.registerCallLocked(TEST_CALL_ID, request.call)
+                                    }
+                                }
+                            }
+                            try {
+                                when (prepared) {
+                                    is com.itsazni.notificationforwarder.network.PreparedWebhookRequest.Ready -> client.execute(prepared)
+                                    is com.itsazni.notificationforwarder.network.PreparedWebhookRequest.Rejected -> prepared.result
+                                }
+                            } finally {
+                                val call = (prepared as? com.itsazni.notificationforwarder.network.PreparedWebhookRequest.Ready)?.call
+                                if (call != null) {
+                                    DeliveryCoordinator.unregisterCall(TEST_CALL_ID, call)
+                                }
+                            }
                         }
                         snackbarHostState.showSnackbar(
                             if (result.success) "Webhook test success" else "Webhook test failed: ${result.message}"
@@ -218,8 +261,24 @@ private fun MainScreen(settingsStore: SettingsStore) {
                 uiSettings = uiSettings,
                 onSettingsChange = { uiSettings = it },
                 onSave = {
-                    saveSettings(settingsStore, uiSettings)
-                    scope.launch { snackbarHostState.showSnackbar("Filter & retry settings saved") }
+                    scope.launch {
+                        val result = saveSettingsCoordinated(context, settingsStore, repository, uiSettings)
+                        if (!result.success) {
+                            snackbarHostState.showSnackbar("Settings not saved: ${result.errorCode}")
+                            return@launch
+                        }
+                        if (result.policyChanged) {
+                            uiSettings = uiSettings.copy(forwardingEnabled = false)
+                            snackbarHostState.showSnackbar("Settings changed; forwarding disabled and queue cleared")
+                        } else if (result.retentionChanged) {
+                            snackbarHostState.showSnackbar("Retention updated")
+                        } else {
+                            snackbarHostState.showSnackbar(
+                                if (settingsStore.forwardingEnabled) "Filter & retry settings saved"
+                                else "Settings saved; forwarding remains disabled until a valid HTTPS endpoint and allowlist are configured."
+                            )
+                        }
+                    }
                 }
             )
 
@@ -230,13 +289,23 @@ private fun MainScreen(settingsStore: SettingsStore) {
                 recent = recent,
                 onDeleteItem = { itemId ->
                     scope.launch {
-                        repository.deleteQueueItem(itemId)
+                        DeliveryCoordinator.withState {
+                            DeliveryCoordinator.cancelRegisteredCallsLocked(setOf(itemId))
+                            repository.deleteQueueItemLocked(itemId)
+                        }
+                        WorkerScheduler.cancelDelivery(context)
+                        WorkerScheduler.ensurePeriodic(context)
                         snackbarHostState.showSnackbar("Queue item deleted")
                     }
                 },
                 onClearQueue = {
                     scope.launch {
-                        repository.clearQueue()
+                        DeliveryCoordinator.withState {
+                            DeliveryCoordinator.cancelRegisteredCallsLocked()
+                            repository.clearQueueLocked()
+                        }
+                        WorkerScheduler.cancelDelivery(context)
+                        WorkerScheduler.ensurePeriodic(context)
                         snackbarHostState.showSnackbar("Queue cleared")
                     }
                 }
@@ -245,7 +314,11 @@ private fun MainScreen(settingsStore: SettingsStore) {
     }
 
     LaunchedEffect(Unit) {
+        repository.purgeExpired()
         WorkerScheduler.ensurePeriodic(context)
+        if (settingsStore.consumePurgeNotice()) {
+            snackbarHostState.showSnackbar("Security upgrade cleared legacy notification history. Add an allowlisted package and enable forwarding to resume.")
+        }
     }
 }
 
@@ -347,6 +420,15 @@ private fun HomeScreen(modifier: Modifier, stats: QueueStats) {
                             contentColor = MaterialTheme.colorScheme.onErrorContainer
                         )
                     }
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        QueueStatCard(
+                            modifier = Modifier.weight(1f),
+                            label = "Expired",
+                            value = stats.expiredCount.toString(),
+                            containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                            contentColor = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
                 }
             }
         }
@@ -372,6 +454,7 @@ private fun WebhookScreen(
             ) {
                 Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     Text("Webhook Settings", fontWeight = FontWeight.SemiBold)
+                    Text("Changing delivery settings clears pending notifications and disables forwarding until you enable it again.")
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween
@@ -475,14 +558,13 @@ private fun FilterScreen(
             ) {
                 Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     Text("Filter & Retry", fontWeight = FontWeight.SemiBold)
+                    Text("Changing the allowlist clears pending notifications and disables forwarding until you enable it again.")
 
                     DropdownSelector(
                         label = "Filter mode",
                         value = uiSettings.filterMode.name,
-                        options = FilterMode.entries.map { it.name },
-                        onSelected = {
-                            onSettingsChange(uiSettings.copy(filterMode = FilterMode.valueOf(it)))
-                        }
+                        options = listOf(FilterMode.WHITELIST.name),
+                        onSelected = { onSettingsChange(uiSettings.copy(filterMode = FilterMode.WHITELIST)) }
                     )
 
                     OutlinedTextField(
@@ -502,6 +584,13 @@ private fun FilterScreen(
                         },
                         label = { Text("Max retries") },
                         singleLine = true
+                    )
+
+                    DropdownSelector(
+                        label = "Retry retention",
+                        value = uiSettings.retentionRaw,
+                        options = (1..24).map { it.toString() } + "OFF",
+                        onSelected = { onSettingsChange(uiSettings.copy(retentionRaw = it)) }
                     )
 
                     OutlinedTextField(
@@ -526,7 +615,7 @@ private fun FilterScreen(
 @Composable
 private fun QueueScreen(
     modifier: Modifier,
-    recent: List<QueueItem>,
+    recent: List<QueueEntry>,
     onDeleteItem: (Long) -> Unit,
     onClearQueue: () -> Unit
 ) {
@@ -561,15 +650,15 @@ private fun QueueScreen(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
-                        Text(item.appName, fontWeight = FontWeight.SemiBold)
+                        Text(item.payload.appName, fontWeight = FontWeight.SemiBold)
                         QueueStatusBadge(status = item.status)
                     }
-                    Text(item.title.ifBlank { "(no title)" })
-                    Text(item.text.ifBlank { "(no text)" })
-                    Text(item.packageName)
+                    Text(item.payload.title.ifBlank { "(no title)" })
+                    Text(item.payload.text.ifBlank { "(no text)" })
+                    Text(item.payload.packageName)
                     Text("Attempt: ${item.attemptCount}")
-                    if (!item.lastError.isNullOrBlank()) {
-                        Text("Err: ${item.lastError}")
+                    if (!item.lastErrorCode.isNullOrBlank()) {
+                        Text("Err: ${item.lastErrorCode}")
                     }
                     Button(
                         modifier = Modifier.fillMaxWidth(),
@@ -672,19 +761,62 @@ private fun QueueStatCard(
     }
 }
 
-private fun saveSettings(settingsStore: SettingsStore, uiSettings: UiSettings) {
-    settingsStore.webhookUrl = uiSettings.webhookUrl
-    settingsStore.webhookMethod = uiSettings.webhookMethod
-    settingsStore.forwardingEnabled = uiSettings.forwardingEnabled
-    settingsStore.filterMode = uiSettings.filterMode
-    settingsStore.filterPackages = SettingsStore.parsePackages(uiSettings.filterPackagesRaw)
-    settingsStore.authMode = uiSettings.authMode
-    settingsStore.bearerToken = uiSettings.bearerToken
-    settingsStore.customHeadersRaw = uiSettings.customHeadersRaw
-    settingsStore.queryParamsRaw = uiSettings.queryParamsRaw
-    settingsStore.payloadTemplateRaw = uiSettings.payloadTemplateRaw
-    settingsStore.maxRetries = uiSettings.maxRetriesRaw.toIntOrNull() ?: 10
-    settingsStore.batchSize = uiSettings.batchSizeRaw.toIntOrNull() ?: 20
+private suspend fun saveSettingsCoordinated(
+    context: Context,
+    settingsStore: SettingsStore,
+    repository: NotificationRepository,
+    uiSettings: UiSettings
+): SettingsSaveResult {
+    var invalidateDelivery = false
+    val result = DeliveryCoordinator.withState {
+        val before = settingsStore.readAll()
+        val saved = saveSettings(settingsStore, uiSettings)
+        if (!saved.success) {
+            return@withState saved
+        }
+        invalidateDelivery = saved.policyChanged || saved.retentionChanged ||
+            (before.forwardingEnabled && !settingsStore.readAll().forwardingEnabled)
+        if (invalidateDelivery) {
+            DeliveryCoordinator.cancelRegisteredCallsLocked()
+        }
+        repository.recalculateRetentionLocked(settingsStore.readAll().retentionHours)
+        if (saved.policyChanged || (before.forwardingEnabled && !settingsStore.readAll().forwardingEnabled)) {
+            repository.clearQueueLocked()
+        }
+        saved
+    }
+    if (result.success && invalidateDelivery) {
+        WorkerScheduler.cancelDelivery(context)
+        WorkerScheduler.ensurePeriodic(context)
+    }
+    return result
+}
+
+private fun saveSettings(settingsStore: SettingsStore, uiSettings: UiSettings): SettingsSaveResult {
+    val retention = when (uiSettings.retentionRaw) {
+        "OFF" -> null
+        else -> uiSettings.retentionRaw.toIntOrNull()?.takeIf { it in 1..24 }
+    }
+    if (uiSettings.retentionRaw != "OFF" && retention == null) {
+        return SettingsSaveResult(false, errorCode = "invalid_retention")
+    }
+    val snapshot = AppSettings(
+        webhookUrl = uiSettings.webhookUrl,
+        webhookMethod = uiSettings.webhookMethod,
+        forwardingEnabled = uiSettings.forwardingEnabled,
+        filterMode = FilterMode.WHITELIST,
+        filterPackages = SettingsStore.parsePackages(uiSettings.filterPackagesRaw),
+        authMode = uiSettings.authMode,
+        bearerToken = uiSettings.bearerToken,
+        customHeadersRaw = uiSettings.customHeadersRaw,
+        queryParamsRaw = uiSettings.queryParamsRaw,
+        payloadTemplateRaw = uiSettings.payloadTemplateRaw,
+        maxRetries = uiSettings.maxRetriesRaw.toIntOrNull() ?: 10,
+        batchSize = uiSettings.batchSizeRaw.toIntOrNull() ?: 20,
+        retentionHours = retention,
+        policyRevision = settingsStore.policyRevision
+    )
+    return settingsStore.saveSnapshot(snapshot)
 }
 
 private fun isNotificationListenerEnabled(context: Context): Boolean {

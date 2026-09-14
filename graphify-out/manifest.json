@@ -1,0 +1,116 @@
+{
+  "app/build.gradle.kts": {
+    "mtime": 1789400200.8151264,
+    "seen": 1789400336.5790925,
+    "ast_hash": "3af883cbe30e213150667cffe2cd671d",
+    "semantic_hash": "3af883cbe30e213150667cffe2cd671d"
+  },
+  "app/src/main/java/com/itsazni/notificationforwarder/MainActivity.kt": {
+    "mtime": 1789400200.8181255,
+    "seen": 1789400336.5790925,
+    "ast_hash": "4834e70c8528a2cc31af079961dc5102",
+    "semantic_hash": "4834e70c8528a2cc31af079961dc5102"
+  },
+  "app/src/main/java/com/itsazni/notificationforwarder/NotificationForwarderApp.kt": {
+    "mtime": 1789400200.8181255,
+    "seen": 1789400336.5790925,
+    "ast_hash": "3fa9914bb142467f385b7db7bfd92370",
+    "semantic_hash": "3fa9914bb142467f385b7db7bfd92370"
+  },
+  "app/src/main/java/com/itsazni/notificationforwarder/data/AppDatabase.kt": {
+    "mtime": 1789400200.8201265,
+    "seen": 1789400336.5790925,
+    "ast_hash": "40ed03d19aaaa91d72fdfef98a8e1dd4",
+    "semantic_hash": "40ed03d19aaaa91d72fdfef98a8e1dd4"
+  },
+  "app/src/main/java/com/itsazni/notificationforwarder/data/NotificationRepository.kt": {
+    "mtime": 1789400200.8201265,
+    "seen": 1789400336.5790925,
+    "ast_hash": "183be7144fdb85e61d8050778c00a76a",
+    "semantic_hash": "183be7144fdb85e61d8050778c00a76a"
+  },
+  "app/src/main/java/com/itsazni/notificationforwarder/data/QueueDao.kt": {
+    "mtime": 1789400200.821127,
+    "seen": 1789400336.5790925,
+    "ast_hash": "94d3f2ce6b36e4bbc7ed04e399e25e76",
+    "semantic_hash": "94d3f2ce6b36e4bbc7ed04e399e25e76"
+  },
+  "app/src/main/java/com/itsazni/notificationforwarder/data/QueueItem.kt": {
+    "mtime": 1789400200.821127,
+    "seen": 1789400336.5790925,
+    "ast_hash": "1e1629264ab8735f5bf019ddfebe33c1",
+    "semantic_hash": "1e1629264ab8735f5bf019ddfebe33c1"
+  },
+  "app/src/main/java/com/itsazni/notificationforwarder/network/WebhookClient.kt": {
+    "mtime": 1789400200.822128,
+    "seen": 1789400336.5790925,
+    "ast_hash": "53e54be505350ff7c96730ba008b9f8e",
+    "semantic_hash": "53e54be505350ff7c96730ba008b9f8e"
+  },
+  "app/src/main/java/com/itsazni/notificationforwarder/receiver/BootCompletedReceiver.kt": {
+    "mtime": 1789400200.823129,
+    "seen": 1789400336.5790925,
+    "ast_hash": "bd03c5e15d54cea334918c10a5097769",
+    "semantic_hash": "bd03c5e15d54cea334918c10a5097769"
+  },
+  "app/src/main/java/com/itsazni/notificationforwarder/service/AppNotificationListenerService.kt": {
+    "mtime": 1789400200.8241258,
+    "seen": 1789400336.5790925,
+    "ast_hash": "e9e950d1ddbd585351094282388af232",
+    "semantic_hash": "e9e950d1ddbd585351094282388af232"
+  },
+  "app/src/main/java/com/itsazni/notificationforwarder/settings/SettingsStore.kt": {
+    "mtime": 1789400200.8251266,
+    "seen": 1789400336.5790925,
+    "ast_hash": "e3dab3f1279c1f58a17a91c0365d7938",
+    "semantic_hash": "e3dab3f1279c1f58a17a91c0365d7938"
+  },
+  "app/src/main/java/com/itsazni/notificationforwarder/ui/theme/AppTheme.kt": {
+    "mtime": 1789400200.8261275,
+    "seen": 1789400336.5790925,
+    "ast_hash": "b9c4e92b01a1a4cd2ddc675955cef28c",
+    "semantic_hash": "b9c4e92b01a1a4cd2ddc675955cef28c"
+  },
+  "app/src/main/java/com/itsazni/notificationforwarder/worker/QueueWorker.kt": {
+    "mtime": 1789400200.8261275,
+    "seen": 1789400336.5790925,
+    "ast_hash": "80266139eb768df3db47085d09dc1caa",
+    "semantic_hash": "80266139eb768df3db47085d09dc1caa"
+  },
+  "app/src/main/java/com/itsazni/notificationforwarder/worker/WorkerScheduler.kt": {
+    "mtime": 1789400200.827127,
+    "seen": 1789400336.5790925,
+    "ast_hash": "54ecb216f9a9242531cf12cfcaee9cce",
+    "semantic_hash": "54ecb216f9a9242531cf12cfcaee9cce"
+  },
+  "build.gradle.kts": {
+    "mtime": 1789400200.8321304,
+    "seen": 1789400336.5790925,
+    "ast_hash": "a825996fecfc9a8bd0f1e54e96d2490a",
+    "semantic_hash": "a825996fecfc9a8bd0f1e54e96d2490a"
+  },
+  "gradlew": {
+    "mtime": 1789400200.8351283,
+    "seen": 1789400336.5790925,
+    "ast_hash": "d71558d06a8c97628fdb0e38b0c36a2d",
+    "semantic_hash": "d71558d06a8c97628fdb0e38b0c36a2d"
+  },
+  "settings.gradle.kts": {
+    "mtime": 1789400200.843126,
+    "seen": 1789400336.5790925,
+    "ast_hash": "84f5e3a21eda37086bb05b55fdcfe8eb",
+    "semantic_hash": "84f5e3a21eda37086bb05b55fdcfe8eb"
+  },
+  "webhook/package.json": {
+    "mtime": 1789400200.8461263,
+    "seen": 1789400336.5790925,
+    "ast_hash": "5df72e5f3a34be42454a2f25eb6f11cf",
+    "semantic_hash": "5df72e5f3a34be42454a2f25eb6f11cf"
+  },
+  "webhook/server.js": {
+    "mtime": 1789400200.8471255,
+    "seen": 1789400336.5790925,
+    "ast_hash": "d0d56a2a01fe2b4bb0714ce12d1191a2",
+    "semantic_hash": "d0d56a2a01fe2b4bb0714ce12d1191a2"
+  }
+}

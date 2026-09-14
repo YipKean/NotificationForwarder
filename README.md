@@ -9,6 +9,8 @@ Android app to listen for incoming notifications and forward them to a configura
 - Compatible with Telegram Bot API, Discord webhooks, and any custom API
 - Queue system with Room (durable local storage)
 - Retry system with WorkManager (network constraints + backoff)
+- Encrypted queue payloads with configurable retry retention (24 hours by default)
+- Whitelist-only capture; changing delivery settings clears pending notifications
 - Background support
 - Auto queue scheduling after reboot (`BOOT_COMPLETED`)
 
@@ -26,6 +28,10 @@ Android app to listen for incoming notifications and forward them to a configura
 ```
 
 ## Webhook Configuration
+
+Forwarding starts disabled after the security upgrade. Add at least one package to the allowlist and configure an HTTPS webhook before enabling it. Retry retention can be set from 1–24 hours or `OFF` for manual clearing; delivered, permanently failed and expired notification content is deleted.
+
+The first launch after upgrading removes the legacy plaintext queue and keeps webhook settings while requiring forwarding to be enabled again. Existing backups created by older versions are not removed by the app.
 
 ### Supported HTTP Methods
 - `GET` — no request body, query params appended to URL
@@ -84,7 +90,7 @@ msg={title}
 
 ## Local Webhook API (`webhook/`)
 
-This repository includes a Node.js webhook receiver in `webhook/` for local testing.
+This repository includes a Node.js webhook receiver in `webhook/` for synthetic local testing. It acknowledges authenticated requests and stores no notification contents.
 
 ### Setup
 
@@ -112,12 +118,24 @@ Environment config (`webhook/.env`):
 
 | Key | Description |
 |-----|-------------|
-| `HOST` | Server host |
+| `HOST` | Server host (defaults to `127.0.0.1`; use a controlled private interface only) |
 | `PORT` | Server port |
 | `WEBHOOK_PATH` | Webhook endpoint path |
-| `WEBHOOK_BEARER_TOKEN` | Optional bearer token |
-| `WEBHOOK_LOG_FILE` | Log file path |
+| `WEBHOOK_BEARER_TOKEN` | Required bearer token |
 | `JSON_LIMIT` | Max JSON body size |
+
+The receiver must be deployed behind an HTTPS reverse proxy for any non-local use, with its upstream port inaccessible from the public network. Configure the proxy to disable access logging. The receiver writes only a generated receipt ID, timestamp and outcome to stdout; existing `webhook.log` files from older versions are not removed automatically.
+
+Example Caddy reverse proxy (keep the Node port bound to localhost):
+
+```caddyfile
+notifications.example.com {
+    log {
+        output discard
+    }
+    reverse_proxy 127.0.0.1:3000
+}
+```
 
 ## Screenshots
 

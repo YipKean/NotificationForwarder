@@ -1,0 +1,475 @@
+{
+  "communities": {
+    "0": [
+      "androidx",
+      "app_src_main_java_com_itsazni_notificationforwarder_mainactivity",
+      "app_src_main_java_com_itsazni_notificationforwarder_mainactivity_dropdownselector",
+      "app_src_main_java_com_itsazni_notificationforwarder_mainactivity_filterscreen",
+      "app_src_main_java_com_itsazni_notificationforwarder_mainactivity_homescreen",
+      "app_src_main_java_com_itsazni_notificationforwarder_mainactivity_isbatteryunrestricted",
+      "app_src_main_java_com_itsazni_notificationforwarder_mainactivity_isnotificationlistenerenabled",
+      "app_src_main_java_com_itsazni_notificationforwarder_mainactivity_kt_context",
+      "app_src_main_java_com_itsazni_notificationforwarder_mainactivity_mainactivity",
+      "app_src_main_java_com_itsazni_notificationforwarder_mainactivity_mainactivity_oncreate",
+      "app_src_main_java_com_itsazni_notificationforwarder_mainactivity_mainscreen",
+      "app_src_main_java_com_itsazni_notificationforwarder_mainactivity_openbatterysettings",
+      "app_src_main_java_com_itsazni_notificationforwarder_mainactivity_parsekeyvaluepairs",
+      "app_src_main_java_com_itsazni_notificationforwarder_mainactivity_queuescreen",
+      "app_src_main_java_com_itsazni_notificationforwarder_mainactivity_queuestatcard",
+      "app_src_main_java_com_itsazni_notificationforwarder_mainactivity_queuestatusbadge",
+      "app_src_main_java_com_itsazni_notificationforwarder_mainactivity_savesettings",
+      "app_src_main_java_com_itsazni_notificationforwarder_mainactivity_statusbadge",
+      "app_src_main_java_com_itsazni_notificationforwarder_mainactivity_touisettings",
+      "app_src_main_java_com_itsazni_notificationforwarder_mainactivity_uisettings",
+      "app_src_main_java_com_itsazni_notificationforwarder_mainactivity_webhookscreen",
+      "app_src_main_java_com_itsazni_notificationforwarder_ui_theme_apptheme",
+      "app_src_main_java_com_itsazni_notificationforwarder_ui_theme_apptheme_apptheme",
+      "bundle",
+      "componentactivity",
+      "intent",
+      "modifier"
+    ],
+    "1": [
+      "app_src_main_java_com_itsazni_notificationforwarder_data_notificationrepository",
+      "app_src_main_java_com_itsazni_notificationforwarder_data_notificationrepository_notificationrepository",
+      "app_src_main_java_com_itsazni_notificationforwarder_data_notificationrepository_notificationrepository_allowpackage",
+      "app_src_main_java_com_itsazni_notificationforwarder_data_notificationrepository_notificationrepository_calculatebackoff",
+      "app_src_main_java_com_itsazni_notificationforwarder_data_notificationrepository_notificationrepository_clearqueue",
+      "app_src_main_java_com_itsazni_notificationforwarder_data_notificationrepository_notificationrepository_deletequeueitem",
+      "app_src_main_java_com_itsazni_notificationforwarder_data_notificationrepository_notificationrepository_markfailure",
+      "app_src_main_java_com_itsazni_notificationforwarder_data_notificationrepository_notificationrepository_marksending",
+      "app_src_main_java_com_itsazni_notificationforwarder_data_notificationrepository_notificationrepository_marksent",
+      "app_src_main_java_com_itsazni_notificationforwarder_data_notificationrepository_notificationrepository_observerecent",
+      "app_src_main_java_com_itsazni_notificationforwarder_data_notificationrepository_notificationrepository_observestats",
+      "app_src_main_java_com_itsazni_notificationforwarder_mainactivity_buildheaderspreview",
+      "app_src_main_java_com_itsazni_notificationforwarder_settings_settingsstore",
+      "app_src_main_java_com_itsazni_notificationforwarder_settings_settingsstore_appsettings",
+      "app_src_main_java_com_itsazni_notificationforwarder_settings_settingsstore_authmode",
+      "app_src_main_java_com_itsazni_notificationforwarder_settings_settingsstore_authmode_bearer",
+      "app_src_main_java_com_itsazni_notificationforwarder_settings_settingsstore_authmode_custom",
+      "app_src_main_java_com_itsazni_notificationforwarder_settings_settingsstore_authmode_none",
+      "app_src_main_java_com_itsazni_notificationforwarder_settings_settingsstore_filtermode",
+      "app_src_main_java_com_itsazni_notificationforwarder_settings_settingsstore_filtermode_all_apps",
+      "app_src_main_java_com_itsazni_notificationforwarder_settings_settingsstore_filtermode_blacklist",
+      "app_src_main_java_com_itsazni_notificationforwarder_settings_settingsstore_filtermode_whitelist",
+      "app_src_main_java_com_itsazni_notificationforwarder_settings_settingsstore_settingsstore",
+      "app_src_main_java_com_itsazni_notificationforwarder_settings_settingsstore_settingsstore_parseheaders",
+      "app_src_main_java_com_itsazni_notificationforwarder_settings_settingsstore_settingsstore_parsepackages",
+      "app_src_main_java_com_itsazni_notificationforwarder_settings_settingsstore_settingsstore_parsequeryparams",
+      "app_src_main_java_com_itsazni_notificationforwarder_settings_settingsstore_settingsstore_readall",
+      "app_src_main_java_com_itsazni_notificationforwarder_worker_queueworker",
+      "app_src_main_java_com_itsazni_notificationforwarder_worker_queueworker_queueworker",
+      "app_src_main_java_com_itsazni_notificationforwarder_worker_queueworker_queueworker_buildheaders",
+      "app_src_main_java_com_itsazni_notificationforwarder_worker_queueworker_queueworker_dowork",
+      "coroutineworker",
+      "result",
+      "sharedpreferences"
+    ],
+    "2": [
+      "ref_dotenv",
+      "ref_express",
+      "webhook_package",
+      "webhook_package_author",
+      "webhook_package_dependencies",
+      "webhook_package_dependencies_dotenv",
+      "webhook_package_dependencies_express",
+      "webhook_package_description",
+      "webhook_package_keywords",
+      "webhook_package_license",
+      "webhook_package_main",
+      "webhook_package_name",
+      "webhook_package_scripts",
+      "webhook_package_scripts_dev",
+      "webhook_package_scripts_start",
+      "webhook_package_version",
+      "webhook_server",
+      "webhook_server_app",
+      "webhook_server_appendlog",
+      "webhook_server_express",
+      "webhook_server_fs",
+      "webhook_server_path",
+      "webhook_server_requirebearerauth"
+    ],
+    "3": [
+      "app_src_main_java_com_itsazni_notificationforwarder_data_notificationrepository_notificationrepository_enqueue",
+      "app_src_main_java_com_itsazni_notificationforwarder_data_notificationrepository_notificationrepository_getpending",
+      "app_src_main_java_com_itsazni_notificationforwarder_data_queuedao",
+      "app_src_main_java_com_itsazni_notificationforwarder_data_queuedao_queuedao",
+      "app_src_main_java_com_itsazni_notificationforwarder_data_queuedao_queuedao_clearall",
+      "app_src_main_java_com_itsazni_notificationforwarder_data_queuedao_queuedao_deletebyid",
+      "app_src_main_java_com_itsazni_notificationforwarder_data_queuedao_queuedao_getpending",
+      "app_src_main_java_com_itsazni_notificationforwarder_data_queuedao_queuedao_insert",
+      "app_src_main_java_com_itsazni_notificationforwarder_data_queuedao_queuedao_marksending",
+      "app_src_main_java_com_itsazni_notificationforwarder_data_queuedao_queuedao_marksent",
+      "app_src_main_java_com_itsazni_notificationforwarder_data_queuedao_queuedao_observerecent",
+      "app_src_main_java_com_itsazni_notificationforwarder_data_queuedao_queuedao_observestats",
+      "app_src_main_java_com_itsazni_notificationforwarder_data_queuedao_queuedao_updatefailure",
+      "app_src_main_java_com_itsazni_notificationforwarder_data_queueitem",
+      "app_src_main_java_com_itsazni_notificationforwarder_data_queueitem_queueitem",
+      "app_src_main_java_com_itsazni_notificationforwarder_data_queueitem_queuestats",
+      "app_src_main_java_com_itsazni_notificationforwarder_data_queueitem_queuestatus",
+      "app_src_main_java_com_itsazni_notificationforwarder_data_queueitem_queuestatus_failed",
+      "app_src_main_java_com_itsazni_notificationforwarder_data_queueitem_queuestatus_pending",
+      "app_src_main_java_com_itsazni_notificationforwarder_data_queueitem_queuestatus_sending",
+      "app_src_main_java_com_itsazni_notificationforwarder_data_queueitem_queuestatus_sent",
+      "flow"
+    ],
+    "4": [
+      "app_src_main_java_com_itsazni_notificationforwarder_notificationforwarderapp",
+      "app_src_main_java_com_itsazni_notificationforwarder_notificationforwarderapp_notificationforwarderapp",
+      "app_src_main_java_com_itsazni_notificationforwarder_notificationforwarderapp_notificationforwarderapp_oncreate",
+      "app_src_main_java_com_itsazni_notificationforwarder_receiver_bootcompletedreceiver",
+      "app_src_main_java_com_itsazni_notificationforwarder_receiver_bootcompletedreceiver_bootcompletedreceiver",
+      "app_src_main_java_com_itsazni_notificationforwarder_receiver_bootcompletedreceiver_bootcompletedreceiver_onreceive",
+      "app_src_main_java_com_itsazni_notificationforwarder_receiver_bootcompletedreceiver_kt_context",
+      "app_src_main_java_com_itsazni_notificationforwarder_worker_workerscheduler",
+      "app_src_main_java_com_itsazni_notificationforwarder_worker_workerscheduler_kt_context",
+      "app_src_main_java_com_itsazni_notificationforwarder_worker_workerscheduler_workerscheduler",
+      "app_src_main_java_com_itsazni_notificationforwarder_worker_workerscheduler_workerscheduler_enqueueimmediate",
+      "app_src_main_java_com_itsazni_notificationforwarder_worker_workerscheduler_workerscheduler_ensureperiodic",
+      "application",
+      "broadcastreceiver"
+    ],
+    "5": [
+      "app_src_main_java_com_itsazni_notificationforwarder_service_appnotificationlistenerservice",
+      "app_src_main_java_com_itsazni_notificationforwarder_service_appnotificationlistenerservice_appnotificationlistenerservice",
+      "app_src_main_java_com_itsazni_notificationforwarder_service_appnotificationlistenerservice_appnotificationlistenerservice_buildstablekey",
+      "app_src_main_java_com_itsazni_notificationforwarder_service_appnotificationlistenerservice_appnotificationlistenerservice_onnotificationposted",
+      "app_src_main_java_com_itsazni_notificationforwarder_service_appnotificationlistenerservice_appnotificationlistenerservice_resolveappname",
+      "app_src_main_java_com_itsazni_notificationforwarder_service_appnotificationlistenerservice_appnotificationlistenerservice_shouldskip",
+      "app_src_main_java_com_itsazni_notificationforwarder_service_appnotificationlistenerservice_appnotificationlistenerservice_trimrecentevents",
+      "app_src_main_java_com_itsazni_notificationforwarder_service_appnotificationlistenerservice_recentevent",
+      "notification",
+      "notificationlistenerservice",
+      "statusbarnotification"
+    ],
+    "6": [
+      "readme_authentication",
+      "readme_authorization_header",
+      "readme_auto_queue_scheduling",
+      "readme_background_support",
+      "readme_backoff",
+      "readme_battery_settings",
+      "readme_bearer_authentication",
+      "readme_boot_completed",
+      "readme_custom_api",
+      "readme_custom_authentication",
+      "readme_custom_headers",
+      "readme_discord_webhooks",
+      "readme_durable_local_storage",
+      "readme_environment_config",
+      "readme_get",
+      "readme_get_health_endpoint",
+      "readme_gradle_assembledebug",
+      "readme_home",
+      "readme_host_env_var",
+      "readme_http_methods",
+      "readme_json_limit_env_var",
+      "readme_local_testing",
+      "readme_local_webhook_api",
+      "readme_network_constraints",
+      "readme_node_js_webhook_receiver",
+      "readme_none_authentication",
+      "readme_notification_access",
+      "readme_notification_capture",
+      "readme_notification_forwarder_android_app",
+      "readme_notification_forwarder_readme",
+      "readme_notificationlistenerservice",
+      "readme_oem_autostart",
+      "readme_oem_roms",
+      "readme_patch",
+      "readme_payload_template",
+      "readme_payload_template_variables",
+      "readme_port_env_var",
+      "readme_post",
+      "readme_post_webhook_endpoint",
+      "readme_put",
+      "readme_query_parameters",
+      "readme_queue_system",
+      "readme_retry_system",
+      "readme_room",
+      "readme_telegram_bot_api",
+      "readme_webhook_api",
+      "readme_webhook_bearer_token_env_var",
+      "readme_webhook_configuration",
+      "readme_webhook_forwarding",
+      "readme_webhook_log_file_env_var",
+      "readme_webhook_path_env_var",
+      "readme_workmanager"
+    ],
+    "7": [
+      "app_src_main_java_com_itsazni_notificationforwarder_network_webhookclient",
+      "app_src_main_java_com_itsazni_notificationforwarder_network_webhookclient_sendresult",
+      "app_src_main_java_com_itsazni_notificationforwarder_network_webhookclient_webhookclient",
+      "app_src_main_java_com_itsazni_notificationforwarder_network_webhookclient_webhookclient_buildurl",
+      "app_src_main_java_com_itsazni_notificationforwarder_network_webhookclient_webhookclient_escapejson",
+      "app_src_main_java_com_itsazni_notificationforwarder_network_webhookclient_webhookclient_rendertemplate",
+      "app_src_main_java_com_itsazni_notificationforwarder_network_webhookclient_webhookclient_send",
+      "okhttpclient"
+    ],
+    "8": [
+      "app_src_main_java_com_itsazni_notificationforwarder_data_appdatabase",
+      "app_src_main_java_com_itsazni_notificationforwarder_data_appdatabase_appdatabase",
+      "app_src_main_java_com_itsazni_notificationforwarder_data_appdatabase_appdatabase_getinstance",
+      "app_src_main_java_com_itsazni_notificationforwarder_data_appdatabase_appdatabase_queuedao",
+      "app_src_main_java_com_itsazni_notificationforwarder_data_appdatabase_kt_context",
+      "roomdatabase"
+    ],
+    "9": [
+      "app_src_main_java_com_itsazni_notificationforwarder_mainactivity_apptab",
+      "app_src_main_java_com_itsazni_notificationforwarder_mainactivity_apptab_filter",
+      "app_src_main_java_com_itsazni_notificationforwarder_mainactivity_apptab_home",
+      "app_src_main_java_com_itsazni_notificationforwarder_mainactivity_apptab_queue",
+      "app_src_main_java_com_itsazni_notificationforwarder_mainactivity_apptab_webhook"
+    ],
+    "10": [
+      "gradlew",
+      "gradlew__entry",
+      "gradlew_die",
+      "gradlew_warn"
+    ],
+    "11": [
+      "app_build_gradle"
+    ],
+    "12": [
+      "build_gradle"
+    ],
+    "13": [
+      "settings_gradle"
+    ],
+    "14": [
+      "screenshots_home_battery_optimization_no_restriction",
+      "screenshots_home_failed_count_0",
+      "screenshots_home_filter_tab",
+      "screenshots_home_home_screen",
+      "screenshots_home_home_tab",
+      "screenshots_home_notification_access_granted",
+      "screenshots_home_notification_forwarder",
+      "screenshots_home_open_access_settings",
+      "screenshots_home_open_battery_settings",
+      "screenshots_home_pending_count_1",
+      "screenshots_home_queue_summary",
+      "screenshots_home_queue_tab",
+      "screenshots_home_sending_count_0",
+      "screenshots_home_sent_count_0",
+      "screenshots_home_service_status",
+      "screenshots_home_sync_queue",
+      "screenshots_home_webhook_tab"
+    ],
+    "15": [
+      "screenshots_webhook_auth_mode",
+      "screenshots_webhook_custom_headers",
+      "screenshots_webhook_enable_forwarding",
+      "screenshots_webhook_http_method",
+      "screenshots_webhook_json_placeholders",
+      "screenshots_webhook_none_auth_mode",
+      "screenshots_webhook_notification_forwarder_app",
+      "screenshots_webhook_payload_template",
+      "screenshots_webhook_post_method",
+      "screenshots_webhook_query_params",
+      "screenshots_webhook_webhook_navigation",
+      "screenshots_webhook_webhook_screen",
+      "screenshots_webhook_webhook_settings",
+      "screenshots_webhook_webhook_url_field"
+    ],
+    "16": [
+      "screenshots_queue_attempt_zero",
+      "screenshots_queue_checking_for_new_messages",
+      "screenshots_queue_clear_all_queue_action",
+      "screenshots_queue_com_whatsapp_w4b",
+      "screenshots_queue_delete_this_queue_action",
+      "screenshots_queue_notification_forwarder_app",
+      "screenshots_queue_pending_status",
+      "screenshots_queue_queue_navigation",
+      "screenshots_queue_queue_screen",
+      "screenshots_queue_recent_queue",
+      "screenshots_queue_whatsapp_business"
+    ],
+    "17": [
+      "screenshots_filter_all_apps",
+      "screenshots_filter_batch_size_20",
+      "screenshots_filter_filter_and_retry",
+      "screenshots_filter_filter_mode",
+      "screenshots_filter_filter_screen",
+      "screenshots_filter_max_retries_10",
+      "screenshots_filter_packages_list",
+      "screenshots_filter_save_filter_and_retry"
+    ],
+    "18": [
+      "license_itsazni",
+      "license_liability_disclaimer",
+      "license_license_document",
+      "license_mit_license",
+      "license_permission_grant",
+      "license_warranty_disclaimer",
+      "readme_mit_license"
+    ]
+  },
+  "cohesion": {
+    "0": 0.17094017094017094,
+    "1": 0.09090909090909091,
+    "2": 0.08695652173913043,
+    "3": 0.12121212121212122,
+    "4": 0.2087912087912088,
+    "5": 0.38181818181818183,
+    "6": 0.05580693815987934,
+    "7": 0.42857142857142855,
+    "8": 0.4666666666666667,
+    "9": 0.4,
+    "10": 0.8333333333333334,
+    "11": 1.0,
+    "12": 1.0,
+    "13": 1.0,
+    "14": 0.11764705882352941,
+    "15": 0.17582417582417584,
+    "16": 0.21818181818181817,
+    "17": 0.25,
+    "18": 0.42857142857142855
+  },
+  "gods": [
+    {
+      "id": "readme_notification_forwarder_readme",
+      "label": "README: Notification Forwarder",
+      "degree": 34
+    },
+    {
+      "id": "app_src_main_java_com_itsazni_notificationforwarder_data_notificationrepository_notificationrepository",
+      "label": "NotificationRepository",
+      "degree": 19
+    },
+    {
+      "id": "app_src_main_java_com_itsazni_notificationforwarder_settings_settingsstore_settingsstore",
+      "label": "SettingsStore",
+      "degree": 16
+    },
+    {
+      "id": "screenshots_home_home_screen",
+      "label": "Notification Forwarder Home Screen",
+      "degree": 16
+    },
+    {
+      "id": "app_src_main_java_com_itsazni_notificationforwarder_mainactivity_mainscreen",
+      "label": "MainScreen()",
+      "degree": 15
+    },
+    {
+      "id": "screenshots_webhook_webhook_screen",
+      "label": "Notification Forwarder Webhook Screen",
+      "degree": 14
+    },
+    {
+      "id": "app_src_main_java_com_itsazni_notificationforwarder_data_queuedao_queuedao",
+      "label": "QueueDao",
+      "degree": 11
+    },
+    {
+      "id": "app_src_main_java_com_itsazni_notificationforwarder_data_queueitem_queueitem",
+      "label": "QueueItem",
+      "degree": 11
+    },
+    {
+      "id": "screenshots_queue_queue_screen",
+      "label": "Notification Forwarder Queue Screen",
+      "degree": 11
+    },
+    {
+      "id": "app_src_main_java_com_itsazni_notificationforwarder_network_webhookclient_webhookclient",
+      "label": "WebhookClient",
+      "degree": 10
+    }
+  ],
+  "surprises": [
+    {
+      "source": "Notification Forwarder Queue Screen",
+      "target": "Notification Forwarder Webhook Screen",
+      "source_files": [
+        "C:/Users/Joe/Desktop/Kean/Project/NotificationForwarder/screenshots/queue.jpg",
+        "C:/Users/Joe/Desktop/Kean/Project/NotificationForwarder/screenshots/webhook.jpg"
+      ],
+      "confidence": "INFERRED",
+      "relation": "semantically_similar_to",
+      "why": "inferred connection - not explicitly stated in source; bridges separate communities; semantically similar concepts with no structural link"
+    },
+    {
+      "source": "MainScreen()",
+      "target": "NotificationRepository",
+      "source_files": [
+        "app/src/main/java/com/itsazni/notificationforwarder/MainActivity.kt",
+        "app/src/main/java/com/itsazni/notificationforwarder/data/NotificationRepository.kt"
+      ],
+      "confidence": "EXTRACTED",
+      "relation": "calls",
+      "why": "bridges separate communities"
+    },
+    {
+      "source": "MainScreen()",
+      "target": "SettingsStore",
+      "source_files": [
+        "app/src/main/java/com/itsazni/notificationforwarder/MainActivity.kt",
+        "app/src/main/java/com/itsazni/notificationforwarder/settings/SettingsStore.kt"
+      ],
+      "confidence": "EXTRACTED",
+      "relation": "references",
+      "why": "bridges separate communities"
+    },
+    {
+      "source": "saveSettings()",
+      "target": "SettingsStore",
+      "source_files": [
+        "app/src/main/java/com/itsazni/notificationforwarder/MainActivity.kt",
+        "app/src/main/java/com/itsazni/notificationforwarder/settings/SettingsStore.kt"
+      ],
+      "confidence": "EXTRACTED",
+      "relation": "references",
+      "why": "bridges separate communities"
+    },
+    {
+      "source": "QueueWorker",
+      "target": "WebhookClient",
+      "source_files": [
+        "app/src/main/java/com/itsazni/notificationforwarder/worker/QueueWorker.kt",
+        "app/src/main/java/com/itsazni/notificationforwarder/network/WebhookClient.kt"
+      ],
+      "confidence": "EXTRACTED",
+      "relation": "calls",
+      "why": "bridges separate communities"
+    }
+  ],
+  "questions": [
+    {
+      "type": "bridge_node",
+      "question": "Why does `NotificationRepository` connect `Settings & Delivery Worker` to `Main UI Screens`, `Queue Persistence`, `Notification Listener`?",
+      "why": "High betweenness centrality (0.063) - this node is a cross-community bridge."
+    },
+    {
+      "type": "bridge_node",
+      "question": "Why does `README: Notification Forwarder` connect `README Product Overview` to `License Terms`?",
+      "why": "High betweenness centrality (0.042) - this node is a cross-community bridge."
+    },
+    {
+      "type": "bridge_node",
+      "question": "Why does `QueueItem` connect `Queue Persistence` to `Main UI Screens`, `Webhook HTTP Client`?",
+      "why": "High betweenness centrality (0.042) - this node is a cross-community bridge."
+    },
+    {
+      "type": "isolated_nodes",
+      "question": "What connects `BEARER`, `CUSTOM`, `NONE` to the rest of the system?",
+      "why": "85 weakly-connected nodes found - possible documentation gaps or missing edges."
+    },
+    {
+      "type": "low_cohesion",
+      "question": "Should `Settings & Delivery Worker` be split into smaller, more focused modules?",
+      "why": "Cohesion score 0.09090909090909091 - nodes in this community are weakly interconnected."
+    },
+    {
+      "type": "low_cohesion",
+      "question": "Should `Webhook Server` be split into smaller, more focused modules?",
+      "why": "Cohesion score 0.08695652173913043 - nodes in this community are weakly interconnected."
+    },
+    {
+      "type": "low_cohesion",
+      "question": "Should `Queue Persistence` be split into smaller, more focused modules?",
+      "why": "Cohesion score 0.12121212121212122 - nodes in this community are weakly interconnected."
+    }
+  ]
+}

@@ -1,0 +1,21 @@
+{
+  "0": "Main UI Screens",
+  "1": "Settings & Delivery Worker",
+  "2": "Webhook Server",
+  "3": "Queue Persistence",
+  "4": "App Lifecycle Scheduling",
+  "5": "Notification Listener",
+  "6": "README Product Overview",
+  "7": "Webhook HTTP Client",
+  "8": "Database Setup",
+  "9": "Navigation Tabs",
+  "10": "Gradle Wrapper Utilities",
+  "11": "App Gradle Config",
+  "12": "Root Gradle Config",
+  "13": "Gradle Settings",
+  "14": "Home Screen Capture",
+  "15": "Webhook Screen Capture",
+  "16": "Queue Screen Capture",
+  "17": "Filter Screen Capture",
+  "18": "License Terms"
+}

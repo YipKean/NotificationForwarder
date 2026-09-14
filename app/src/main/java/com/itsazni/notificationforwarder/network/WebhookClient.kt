@@ -2,14 +2,16 @@ package com.itsazni.notificationforwarder.network
 
 import com.google.gson.Gson
 import com.google.gson.JsonParser
-import com.itsazni.notificationforwarder.data.QueueItem
+import com.itsazni.notificationforwarder.data.NotificationPayload
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
+import okhttp3.Call
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
-import okhttp3.logging.HttpLoggingInterceptor
+import kotlinx.coroutines.suspendCancellableCoroutine
 import java.util.concurrent.TimeUnit
+import kotlin.coroutines.resume
 
 data class SendResult(
     val success: Boolean,
@@ -17,27 +19,37 @@ data class SendResult(
     val message: String
 )
 
+sealed class PreparedWebhookRequest {
+    data class Ready(val call: Call) : PreparedWebhookRequest()
+    data class Rejected(val result: SendResult) : PreparedWebhookRequest()
+}
+
 class WebhookClient {
     private val gson = Gson()
     private val client: OkHttpClient = OkHttpClient.Builder()
         .connectTimeout(15, TimeUnit.SECONDS)
         .readTimeout(20, TimeUnit.SECONDS)
         .writeTimeout(20, TimeUnit.SECONDS)
-        .addInterceptor(HttpLoggingInterceptor().apply {
-            level = HttpLoggingInterceptor.Level.BASIC
-        })
+        .followRedirects(false)
+        .followSslRedirects(false)
         .build()
 
-    fun send(
+    fun prepare(
         url: String,
         method: String,
         headers: Map<String, String>,
         queryParams: Map<String, String>,
         payloadTemplate: String,
-        item: QueueItem,
+        item: NotificationPayload,
         deviceId: String
-    ): SendResult {
+    ): PreparedWebhookRequest {
         return try {
+            if (!EndpointValidator.isValid(url)) {
+                return PreparedWebhookRequest.Rejected(SendResult(false, true, "invalid_endpoint"))
+            }
+            if (method.uppercase() !in SUPPORTED_METHODS) {
+                return PreparedWebhookRequest.Rejected(SendResult(false, true, "invalid_method"))
+            }
             val vars = mapOf(
                 "deviceId" to deviceId,
                 "packageName" to escapeJson(item.packageName),
@@ -80,16 +92,55 @@ class WebhookClient {
                 requestBuilder.addHeader(k, v)
             }
 
-            client.newCall(requestBuilder.build()).execute().use { response ->
-                if (response.isSuccessful) {
-                    SendResult(true, false, "OK")
-                } else {
-                    val permanent = response.code in 400..499 && response.code != 429
-                    SendResult(false, permanent, "HTTP ${response.code}")
+            PreparedWebhookRequest.Ready(client.newCall(requestBuilder.build()))
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            throw e
+        } catch (e: com.google.gson.JsonParseException) {
+            PreparedWebhookRequest.Rejected(SendResult(false, true, "invalid_payload"))
+        } catch (e: IllegalArgumentException) {
+            PreparedWebhookRequest.Rejected(SendResult(false, true, "invalid_request"))
+        } catch (_: Exception) {
+            PreparedWebhookRequest.Rejected(SendResult(false, false, "network_failure"))
+        }
+    }
+
+    suspend fun execute(request: PreparedWebhookRequest.Ready): SendResult {
+        return suspendCancellableCoroutine { continuation ->
+            continuation.invokeOnCancellation { request.call.cancel() }
+            request.call.enqueue(object : okhttp3.Callback {
+                override fun onFailure(call: okhttp3.Call, e: java.io.IOException) {
+                    if (continuation.isActive) continuation.resume(SendResult(false, false, "network_failure"))
                 }
-            }
-        } catch (e: Exception) {
-            SendResult(false, false, e.message ?: "network error")
+
+                override fun onResponse(call: okhttp3.Call, response: okhttp3.Response) {
+                    response.use {
+                        val result = if (it.code in 300..399) {
+                            SendResult(false, true, "redirect_rejected")
+                        } else if (it.isSuccessful) {
+                            SendResult(true, false, "OK")
+                        } else {
+                            val permanent = it.code in 400..499 && it.code != 429
+                            SendResult(false, permanent, "HTTP ${it.code}")
+                        }
+                        if (continuation.isActive) continuation.resume(result)
+                    }
+                }
+            })
+        }
+    }
+
+    suspend fun send(
+        url: String,
+        method: String,
+        headers: Map<String, String>,
+        queryParams: Map<String, String>,
+        payloadTemplate: String,
+        item: NotificationPayload,
+        deviceId: String
+    ): SendResult {
+        return when (val prepared = prepare(url, method, headers, queryParams, payloadTemplate, item, deviceId)) {
+            is PreparedWebhookRequest.Ready -> execute(prepared)
+            is PreparedWebhookRequest.Rejected -> prepared.result
         }
     }
 
@@ -119,5 +170,17 @@ class WebhookClient {
             .replace("\n", "\\n")
             .replace("\r", "\\r")
             .replace("\t", "\\t")
+    }
+
+    companion object {
+        private val SUPPORTED_METHODS = setOf("GET", "POST", "PUT", "PATCH")
+    }
+}
+
+object EndpointValidator {
+    fun isValid(value: String): Boolean {
+        val url = value.toHttpUrlOrNull() ?: return false
+        return url.scheme == "https" && url.host.isNotBlank() &&
+            url.username.isEmpty() && url.password.isEmpty() && url.fragment == null
     }
 }
