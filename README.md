@@ -27,6 +27,12 @@ Android app to listen for incoming notifications and forward them to a configura
 ./gradlew assembleDebug
 ```
 
+## Application Identity
+
+The application ID is now `com.notificationforwarder.app`. This is a new app identity, so configure notification access, the allowlist and webhook settings again after installing it. Disable or uninstall the old `com.itsazni.notificationforwarder` app first to prevent duplicate forwarding.
+
+The historical Graphify snapshots under `graphify-out/` retain source paths from before this rename. Use current-source searches and the active tree as the authority for package paths.
+
 ## Webhook Configuration
 
 Forwarding starts disabled after the security upgrade. Add at least one package to the allowlist and configure an HTTPS webhook before enabling it. Retry retention can be set from 1–24 hours or `OFF` for manual clearing; delivered, permanently failed and expired notification content is deleted.

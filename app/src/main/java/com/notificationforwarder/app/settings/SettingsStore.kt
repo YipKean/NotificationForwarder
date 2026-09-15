@@ -1,9 +1,9 @@
-package com.itsazni.notificationforwarder.settings
+package com.notificationforwarder.app.settings
 
 import android.content.Context
 import android.content.SharedPreferences
 import androidx.core.content.edit
-import com.itsazni.notificationforwarder.network.EndpointValidator
+import com.notificationforwarder.app.network.EndpointValidator
 
 enum class FilterMode { ALL_APPS, WHITELIST, BLACKLIST }
 enum class AuthMode { NONE, BEARER, CUSTOM }

@@ -1,9 +1,9 @@
-package com.itsazni.notificationforwarder.data
+package com.notificationforwarder.app.data
 
 import android.content.Context
-import com.itsazni.notificationforwarder.settings.FilterMode
-import com.itsazni.notificationforwarder.settings.SettingsStore
-import com.itsazni.notificationforwarder.worker.DeliveryCoordinator
+import com.notificationforwarder.app.settings.FilterMode
+import com.notificationforwarder.app.settings.SettingsStore
+import com.notificationforwarder.app.worker.DeliveryCoordinator
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import java.security.MessageDigest
@@ -220,7 +220,7 @@ class NotificationRepository(private val context: Context) {
         runCatching { QueueCrypto.resetKey() }
     }
 
-    private fun canCaptureWith(settings: com.itsazni.notificationforwarder.settings.AppSettings, packageName: String): Boolean {
+    private fun canCaptureWith(settings: com.notificationforwarder.app.settings.AppSettings, packageName: String): Boolean {
         return settings.forwardingEnabled && settings.filterMode == FilterMode.WHITELIST &&
             settings.filterPackages.contains(packageName) && settings.webhookUrl.isNotBlank()
     }

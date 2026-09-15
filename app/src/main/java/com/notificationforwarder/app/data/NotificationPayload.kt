@@ -1,4 +1,4 @@
-package com.itsazni.notificationforwarder.data
+package com.notificationforwarder.app.data
 
 data class NotificationPayload(
     val packageName: String,

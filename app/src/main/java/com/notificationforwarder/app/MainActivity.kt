@@ -1,4 +1,4 @@
-package com.itsazni.notificationforwarder
+package com.notificationforwarder.app
 
 import android.content.ComponentName
 import android.content.Context
@@ -60,20 +60,20 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.itsazni.notificationforwarder.data.NotificationRepository
-import com.itsazni.notificationforwarder.data.NotificationPayload
-import com.itsazni.notificationforwarder.data.QueueEntry
-import com.itsazni.notificationforwarder.data.QueueStats
-import com.itsazni.notificationforwarder.data.QueueStatus
-import com.itsazni.notificationforwarder.network.WebhookClient
-import com.itsazni.notificationforwarder.settings.AppSettings
-import com.itsazni.notificationforwarder.settings.AuthMode
-import com.itsazni.notificationforwarder.settings.FilterMode
-import com.itsazni.notificationforwarder.settings.SettingsSaveResult
-import com.itsazni.notificationforwarder.settings.SettingsStore
-import com.itsazni.notificationforwarder.ui.theme.AppTheme
-import com.itsazni.notificationforwarder.worker.DeliveryCoordinator
-import com.itsazni.notificationforwarder.worker.WorkerScheduler
+import com.notificationforwarder.app.data.NotificationRepository
+import com.notificationforwarder.app.data.NotificationPayload
+import com.notificationforwarder.app.data.QueueEntry
+import com.notificationforwarder.app.data.QueueStats
+import com.notificationforwarder.app.data.QueueStatus
+import com.notificationforwarder.app.network.WebhookClient
+import com.notificationforwarder.app.settings.AppSettings
+import com.notificationforwarder.app.settings.AuthMode
+import com.notificationforwarder.app.settings.FilterMode
+import com.notificationforwarder.app.settings.SettingsSaveResult
+import com.notificationforwarder.app.settings.SettingsStore
+import com.notificationforwarder.app.ui.theme.AppTheme
+import com.notificationforwarder.app.worker.DeliveryCoordinator
+import com.notificationforwarder.app.worker.WorkerScheduler
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -230,18 +230,18 @@ private fun MainScreen(settingsStore: SettingsStore) {
                                     ),
                                     deviceId = "test-device"
                                 ).also { request ->
-                                    if (request is com.itsazni.notificationforwarder.network.PreparedWebhookRequest.Ready) {
+                                    if (request is com.notificationforwarder.app.network.PreparedWebhookRequest.Ready) {
                                         DeliveryCoordinator.registerCallLocked(TEST_CALL_ID, request.call)
                                     }
                                 }
                             }
                             try {
                                 when (prepared) {
-                                    is com.itsazni.notificationforwarder.network.PreparedWebhookRequest.Ready -> client.execute(prepared)
-                                    is com.itsazni.notificationforwarder.network.PreparedWebhookRequest.Rejected -> prepared.result
+                                    is com.notificationforwarder.app.network.PreparedWebhookRequest.Ready -> client.execute(prepared)
+                                    is com.notificationforwarder.app.network.PreparedWebhookRequest.Rejected -> prepared.result
                                 }
                             } finally {
-                                val call = (prepared as? com.itsazni.notificationforwarder.network.PreparedWebhookRequest.Ready)?.call
+                                val call = (prepared as? com.notificationforwarder.app.network.PreparedWebhookRequest.Ready)?.call
                                 if (call != null) {
                                     DeliveryCoordinator.unregisterCall(TEST_CALL_ID, call)
                                 }
@@ -824,7 +824,7 @@ private fun isNotificationListenerEnabled(context: Context): Boolean {
     if (enabled.isNullOrBlank()) {
         return false
     }
-    val target = ComponentName(context, com.itsazni.notificationforwarder.service.AppNotificationListenerService::class.java)
+    val target = ComponentName(context, com.notificationforwarder.app.service.AppNotificationListenerService::class.java)
     return enabled.contains(target.flattenToString())
 }
 

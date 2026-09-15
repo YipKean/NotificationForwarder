@@ -1,11 +1,11 @@
-package com.itsazni.notificationforwarder.data
+package com.notificationforwarder.app.data
 
 import android.content.Context
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
-import com.itsazni.notificationforwarder.settings.SettingsStore
+import com.notificationforwarder.app.settings.SettingsStore
 
 @Database(entities = [QueueItem::class, QueueMetrics::class], version = 1, exportSchema = false)
 @TypeConverters(QueueConverters::class)

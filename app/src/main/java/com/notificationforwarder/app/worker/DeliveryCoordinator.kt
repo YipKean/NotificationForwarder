@@ -1,4 +1,4 @@
-package com.itsazni.notificationforwarder.worker
+package com.notificationforwarder.app.worker
 
 import okhttp3.Call
 import kotlinx.coroutines.NonCancellable

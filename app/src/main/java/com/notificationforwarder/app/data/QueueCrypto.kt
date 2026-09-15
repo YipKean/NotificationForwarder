@@ -1,4 +1,4 @@
-package com.itsazni.notificationforwarder.data
+package com.notificationforwarder.app.data
 
 import android.security.keystore.KeyGenParameterSpec
 import android.security.keystore.KeyPermanentlyInvalidatedException

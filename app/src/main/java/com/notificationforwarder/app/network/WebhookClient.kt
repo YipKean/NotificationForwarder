@@ -1,8 +1,8 @@
-package com.itsazni.notificationforwarder.network
+package com.notificationforwarder.app.network
 
 import com.google.gson.Gson
 import com.google.gson.JsonParser
-import com.itsazni.notificationforwarder.data.NotificationPayload
+import com.notificationforwarder.app.data.NotificationPayload
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import okhttp3.Call
 import okhttp3.MediaType.Companion.toMediaType

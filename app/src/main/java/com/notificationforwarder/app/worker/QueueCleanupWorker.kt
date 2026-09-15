@@ -1,10 +1,10 @@
-package com.itsazni.notificationforwarder.worker
+package com.notificationforwarder.app.worker
 
 import android.content.Context
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
-import com.itsazni.notificationforwarder.data.NotificationRepository
-import com.itsazni.notificationforwarder.settings.SettingsStore
+import com.notificationforwarder.app.data.NotificationRepository
+import com.notificationforwarder.app.settings.SettingsStore
 
 class QueueCleanupWorker(
     appContext: Context,

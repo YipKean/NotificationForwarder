@@ -1,4 +1,4 @@
-package com.itsazni.notificationforwarder.data
+package com.notificationforwarder.app.data
 
 import androidx.room.Entity
 import androidx.room.Index

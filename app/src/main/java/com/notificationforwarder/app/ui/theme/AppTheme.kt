@@ -1,4 +1,4 @@
-package com.itsazni.notificationforwarder.ui.theme
+package com.notificationforwarder.app.ui.theme
 
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme

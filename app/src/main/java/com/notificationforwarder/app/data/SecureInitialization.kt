@@ -1,7 +1,7 @@
-package com.itsazni.notificationforwarder.data
+package com.notificationforwarder.app.data
 
 import android.content.Context
-import com.itsazni.notificationforwarder.settings.SettingsStore
+import com.notificationforwarder.app.settings.SettingsStore
 import java.io.File
 
 object SecureInitialization {

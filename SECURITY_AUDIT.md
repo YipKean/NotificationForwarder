@@ -116,7 +116,7 @@ Severity: high = substantial disclosure under a realistic configuration or acces
 
 ## Complete application data-flow inventory
 
-Paths below are relative to `app/src/main/java/com/itsazni/notificationforwarder/` unless prefixed otherwise.
+Paths below are relative to `app/src/main/java/com/notificationforwarder/app/` unless prefixed otherwise.
 
 | Source / trigger | Processing and sink | Exposure / finding |
 |---|---|---|

@@ -5,11 +5,11 @@ plugins {
 }
 
 android {
-    namespace = "com.itsazni.notificationforwarder"
+    namespace = "com.notificationforwarder.app"
     compileSdk = 36
 
     defaultConfig {
-        applicationId = "com.itsazni.notificationforwarder"
+        applicationId = "com.notificationforwarder.app"
         minSdk = 26
         targetSdk = 36
         versionCode = 1

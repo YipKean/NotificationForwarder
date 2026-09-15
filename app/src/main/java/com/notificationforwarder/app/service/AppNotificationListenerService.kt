@@ -1,13 +1,13 @@
-package com.itsazni.notificationforwarder.service
+package com.notificationforwarder.app.service
 
 import android.app.Notification
 import android.os.Build
 import android.service.notification.NotificationListenerService
 import android.service.notification.StatusBarNotification
-import com.itsazni.notificationforwarder.data.NotificationRepository
-import com.itsazni.notificationforwarder.settings.FilterMode
-import com.itsazni.notificationforwarder.settings.SettingsStore
-import com.itsazni.notificationforwarder.worker.WorkerScheduler
+import com.notificationforwarder.app.data.NotificationRepository
+import com.notificationforwarder.app.settings.FilterMode
+import com.notificationforwarder.app.settings.SettingsStore
+import com.notificationforwarder.app.worker.WorkerScheduler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob

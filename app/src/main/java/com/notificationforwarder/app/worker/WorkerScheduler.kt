@@ -1,4 +1,4 @@
-package com.itsazni.notificationforwarder.worker
+package com.notificationforwarder.app.worker
 
 import android.content.Context
 import androidx.work.BackoffPolicy

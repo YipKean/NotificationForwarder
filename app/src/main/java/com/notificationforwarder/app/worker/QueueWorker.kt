@@ -1,15 +1,15 @@
-package com.itsazni.notificationforwarder.worker
+package com.notificationforwarder.app.worker
 
 import android.content.Context
 import android.provider.Settings
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
-import com.itsazni.notificationforwarder.data.NotificationRepository
-import com.itsazni.notificationforwarder.network.PreparedWebhookRequest
-import com.itsazni.notificationforwarder.network.SendResult
-import com.itsazni.notificationforwarder.network.WebhookClient
-import com.itsazni.notificationforwarder.settings.AuthMode
-import com.itsazni.notificationforwarder.settings.SettingsStore
+import com.notificationforwarder.app.data.NotificationRepository
+import com.notificationforwarder.app.network.PreparedWebhookRequest
+import com.notificationforwarder.app.network.SendResult
+import com.notificationforwarder.app.network.WebhookClient
+import com.notificationforwarder.app.settings.AuthMode
+import com.notificationforwarder.app.settings.SettingsStore
 
 class QueueWorker(
     appContext: Context,

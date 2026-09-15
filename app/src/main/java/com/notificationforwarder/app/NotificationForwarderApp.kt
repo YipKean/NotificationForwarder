@@ -1,8 +1,8 @@
-package com.itsazni.notificationforwarder
+package com.notificationforwarder.app
 
 import android.app.Application
-import com.itsazni.notificationforwarder.data.SecureInitialization
-import com.itsazni.notificationforwarder.worker.WorkerScheduler
+import com.notificationforwarder.app.data.SecureInitialization
+import com.notificationforwarder.app.worker.WorkerScheduler
 
 class NotificationForwarderApp : Application() {
     override fun onCreate() {

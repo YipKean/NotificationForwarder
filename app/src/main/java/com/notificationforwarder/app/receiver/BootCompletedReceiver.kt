@@ -1,10 +1,10 @@
-package com.itsazni.notificationforwarder.receiver
+package com.notificationforwarder.app.receiver
 
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
-import com.itsazni.notificationforwarder.data.SecureInitialization
-import com.itsazni.notificationforwarder.worker.WorkerScheduler
+import com.notificationforwarder.app.data.SecureInitialization
+import com.notificationforwarder.app.worker.WorkerScheduler
 
 class BootCompletedReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
