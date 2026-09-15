@@ -23,6 +23,8 @@ Android app to listen for incoming notifications and forward them to a configura
 
 ## Build
 
+For Windows tooling, APK installation, phone configuration and testing, see [SETUP.md](SETUP.md).
+
 ```bash
 ./gradlew assembleDebug
 ```
