@@ -98,14 +98,14 @@ msg={title}
 
 ## Local Webhook API (`webhook/`)
 
-This repository includes a Node.js webhook receiver in `webhook/` for synthetic local testing. It acknowledges authenticated requests and stores no notification contents.
+This repository includes a Node.js webhook receiver in `webhook/` for synthetic local testing. It authenticates requests and stores accepted notification payloads in a local SQLite database before acknowledging them.
 
 ### Setup
 
-```bash
+```powershell
 cd webhook
-npm install
-cp .env.example .env
+npm ci
+if (-not (Test-Path .env)) { Copy-Item .env.example .env }
 ```
 
 ### Run
@@ -131,8 +131,9 @@ Environment config (`webhook/.env`):
 | `WEBHOOK_PATH` | Webhook endpoint path |
 | `WEBHOOK_BEARER_TOKEN` | Required bearer token |
 | `JSON_LIMIT` | Max JSON body size |
+| `DATABASE_PATH` | SQLite path; relative paths resolve from `webhook/` |
 
-The receiver must be deployed behind an HTTPS reverse proxy for any non-local use, with its upstream port inaccessible from the public network. Configure the proxy to disable access logging. The receiver writes only a generated receipt ID, timestamp and outcome to stdout; existing `webhook.log` files from older versions are not removed automatically.
+The receiver must be deployed behind an HTTPS reverse proxy for any non-local use, with its upstream port inaccessible from the public network. Configure the proxy to disable access logging. The receiver writes only a generated receipt ID, timestamp and outcome to stdout. SQLite files are local synthetic-test storage and are ignored by Git; stop the receiver before copying an existing database to another machine.
 
 Example Caddy reverse proxy (keep the Node port bound to localhost):
 

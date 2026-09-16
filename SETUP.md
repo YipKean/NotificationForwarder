@@ -6,7 +6,9 @@ Windows / PowerShell guide for building Notification Forwarder and testing it on
 
 - Application ID: `com.notificationforwarder.app`.
 - Minimum phone version: Android 8.0 (API 26).
-- Namespace review passed, but the last build attempt stopped because Java was unavailable. Compilation, lint and phone tests are still outstanding.
+- On 2026-09-16, the user reported completing the build/setup commands and installing the app on their phone. They explicitly confirmed that the Discord webhook worked and a notification was forwarded successfully with Instagram configured as the test source (`com.instagram.android`). This is user-confirmed device evidence; build/lint logs were not captured by the agent.
+- The earlier missing-Java blocker was superseded after switching environments: Android Studio's bundled Java 21.0.6 and Android SDK 36 were found locally. The documented AGP/SDK compatibility gap below and the full device acceptance checklist have not been independently cleared.
+- The local SQLite receiver passed 17 automated tests and parent review. Phone-to-local-receiver HTTPS delivery and old-laptop deployment are still pending. See the [laptop handoff](PROJECT.md#windows-laptop-handoff).
 - This installs separately from `com.itsazni.notificationforwarder`. Settings, queue data and notification access do not transfer. Disable forwarding in the old app before testing the new one.
 
 ## 1. Prepare the Windows build tools
@@ -86,7 +88,7 @@ The bundled `webhook/` server can check connectivity:
 ```powershell
 Set-Location webhook
 npm ci
-Copy-Item .env.example .env
+if (-not (Test-Path .env)) { Copy-Item .env.example .env }
 ```
 
 Run the copy command only for initial setup; preserve an existing `.env`. Edit `.env` and replace `WEBHOOK_BEARER_TOKEN` with a long random token, then start the server:
@@ -96,9 +98,11 @@ npm test
 npm start
 ```
 
-This requires Node.js and npm. By default the server listens on `127.0.0.1:3000`, accepts authenticated `POST /webhook`, and provides `GET /health`. Put a phone-reachable HTTPS reverse proxy in front of it; the local HTTP listener alone is not a usable app endpoint. HTTPS hosting and certificate setup depend on your server environment.
+This requires Node.js 24.13.0 or a later Node 24 patch and npm. The built-in SQLite module is marked experimental by Node and may print a warning. By default the server listens on `127.0.0.1:3000`, accepts authenticated `POST /webhook`, stores accepted payloads in `webhook/data/notifications.sqlite`, and provides `GET /health`. Put a phone-reachable HTTPS reverse proxy in front of it; the local HTTP listener alone is not a usable app endpoint. HTTPS hosting and certificate setup depend on your server environment.
 
-**Receipt is not storage:** this scaffold returns success and logs receipt metadata, but discards the notification body. The Android app removes delivered payloads after success. Use this receiver for synthetic connectivity tests only; financial ingestion needs durable storage before acknowledgment.
+The receiver commits each accepted payload before returning success. It stores the generated receipt ID, UTC receipt time and validated JSON in SQLite, with no public read endpoint and no automatic deletion. Repeated deliveries currently create separate rows because the installed Android app has no persistent event ID. The database is not application-encrypted, so use this receiver for synthetic testing only until Hermes ingestion and deployment hardening are complete.
+
+To move this receiver to another Windows machine, copy or clone the `webhook/` directory, install Node 24.13.0 or later within the Node 24 line, run `npm ci`, create `.env` from `.env.example` without overwriting an existing file, and set a new local bearer token and database path. Stop the receiver before copying an existing SQLite database. Keep the Node listener on localhost until a later HTTPS reverse-proxy setup is complete.
 
 ## 6. Phone acceptance checklist
 
