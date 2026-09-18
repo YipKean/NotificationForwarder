@@ -8,6 +8,8 @@ Audit date: 2026-09-14. Scope: all application Kotlin sources, resources, manife
 
 Severity: high = substantial disclosure under a realistic configuration or access condition; medium = narrower exposure or defense missing; low = unnecessary surface or hardening. Authorized delivery to a deliberately selected webhook is the product's intended behavior, not itself a vulnerability. Severity does not imply another ordinary Android app can bypass the sandbox.
 
+**Follow-up status (2026-09-18):** The user has verified synthetic phone delivery from the old Windows laptop through an ephemeral ngrok HTTPS tunnel and asynchronous draft classification by the dedicated Hermes `finance-notifications` profile using Luna. This confirms transport and test processing only; it does not close the findings or authorize real banking notifications. The receiver database remains local, unencrypted application storage, and the Android payload still lacks sensitive-content filtering, expanded-text preservation and a persistent event ID.
+
 ## Findings
 
 ### H1 — High: HTTP can transmit banking contents and credentials in cleartext

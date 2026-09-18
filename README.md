@@ -98,7 +98,7 @@ msg={title}
 
 ## Local Webhook API (`webhook/`)
 
-This repository includes a Node.js webhook receiver in `webhook/` for synthetic local testing. It authenticates requests and stores accepted notification payloads in a local SQLite database before acknowledging them.
+This repository includes a Node.js webhook receiver in `webhook/` for synthetic local testing. It authenticates requests and stores accepted notification payloads in a local SQLite database before acknowledging them. An optional Hermes worker then classifies saved synthetic receipts asynchronously through a dedicated Hermes profile.
 
 ### Setup
 
@@ -145,6 +145,19 @@ notifications.example.com {
     reverse_proxy 127.0.0.1:3000
 }
 ```
+
+### Hermes processing worker
+
+After the receiver is running and the `finance-notifications` Hermes profile is configured, use:
+
+```powershell
+npm run process:status
+npm run process:once
+npm run process:results
+npm run process:watch
+```
+
+The worker stores draft classifications and retry state in the local SQLite database. It uses the profile's configured model (Luna on the verified laptop), disables tools in that dedicated profile, and validates the entire quiet response as JSON. It is an at-least-once synthetic classifier, not a finance ledger; sensitive-content filtering, persistent event IDs, event deduplication and storage protection remain required before banking use. See [webhook/HERMES_SETUP.md](webhook/HERMES_SETUP.md).
 
 ## Screenshots
 

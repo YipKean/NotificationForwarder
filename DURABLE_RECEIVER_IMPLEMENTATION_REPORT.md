@@ -79,3 +79,9 @@ The route validates the body, generates `receiptId` and `receivedAt`, calls the 
 The parent independently reviewed the corrected HTTP parsing, storage lifecycle, startup errors, configuration loading and Git ignore rules. No blocking findings remain for the synthetic receiver milestone. The parent reran all 17 tests successfully and verified `git diff --check`. A separate filesystem-read trap confirmed that importing the receiver and using explicit configuration perform zero `.env` reads. `git check-ignore` confirmed custom SQLite paths, sidecars and `.env.local` are ignored while `.env.example` is not.
 
 This review accepts the local receiver implementation only. Laptop deployment, real operating-system signal delivery, phone-to-receiver HTTPS connectivity, Hermes processing and banking use remain unverified or deferred as described above.
+
+## 10. Follow-up status — 2026-09-18
+
+The historical receiver review above predates the laptop handoff. The user has since verified the loopback receiver on the old Windows laptop, phone reachability through an ephemeral ngrok HTTPS tunnel, and a separate `finance-notifications` Hermes Agent `v0.21.0` profile configured for Luna. The new `webhook/hermes-worker.js` adds asynchronous synthetic classification with durable leases, bounded retries and validated `hermes_processing` rows. The worker and receiver suites now report 27 passing tests together.
+
+Two live synthetic receipts completed as `non_transaction` classifications. This follow-up does not change the original limitations: the Android app has no persistent event ID, duplicate delivery is possible, the SQLite database is not application-encrypted, the worker output is a draft rather than a verified transaction, and unattended startup, sensitive-content filtering and finance-ledger storage remain unimplemented.

@@ -144,6 +144,10 @@ Astra's final source pass closed the three follow-up blockers: expiry/corruption
 - Verify policy changes, disabling during delivery, overlapping workers, stale listener callbacks, and process restart recovery.
 - Run `node --test --test-isolation=none webhook/server.test.js` with malformed/oversized JSON and secret-bearing URL/header/body; separately verify missing-token startup and confirm receipt-only output.
 
+## Follow-up status — 2026-09-18
+
+The user has since deployed the receiver to the old Windows laptop, exposed it temporarily through ngrok HTTPS, and verified fresh phone delivery. Hermes Agent `v0.21.0` is configured in the isolated `finance-notifications` profile with Luna. The optional `webhook/hermes-worker.js` classified two synthetic receipts successfully and records durable processing state. These checks establish the synthetic transport path only; they do not constitute Android release validation or close the remaining security findings.
+
 ## Remaining scope and limitations
 
 Medium and low findings from `SECURITY_AUDIT.md` were intentionally left out of this handoff, including credential-at-rest hardening in preferences, UI masking/accessibility changes, and the broader device-identifier/raw-notification-key minimization work. An injectable clock, Android acceptance test tree, and an expiry-triggered refresh for an idle queue screen remain to be added during Astra's build-enabled review. Recovery currently resets interrupted `SENDING` rows before the worker's eligibility pass; the current retention reconciliation and per-row checks still prevent over-age delivery. The approved H5 caveat for indefinite encrypted retention in Off mode remains. No deployment, commit, or unrelated cleanup was performed.

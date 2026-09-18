@@ -1,0 +1,6 @@
+{
+  "node": "C:\\Program Files\\nodejs\\node.exe",
+  "ngrok": "C:\\Users\\YOUR_USER\\AppData\\Local\\Microsoft\\WindowsApps\\ngrok.exe",
+  "hermes": "C:\\Users\\YOUR_USER\\AppData\\Local\\hermes\\bin\\hermes.exe",
+  "ngrokUrl": "https://YOUR_ASSIGNED_DOMAIN.ngrok-free.dev"
+}

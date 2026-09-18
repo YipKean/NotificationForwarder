@@ -1,6 +1,6 @@
 # Hermes Finance Notification Bridge
 
-Status: updated 2026-09-16. Discord notification delivery is user-confirmed; the local durable receiver is implemented and reviewed. Windows laptop deployment and Hermes processing remain pending.
+Status: updated 2026-09-18. The user confirmed the old Windows laptop receiver, ngrok HTTPS forwarding, the `finance-notifications` Hermes profile using Luna, and automatic worker processing are working. Two receipts completed as draft `non_transaction` classifications. The live synthetic transport milestone is complete; banking readiness remains out of scope until the safeguards below are implemented and tested.
 
 ## Goal and scope
 
@@ -33,7 +33,8 @@ Paths below are relative to `app/src/main/java/com/notificationforwarder/app/` u
 | Local persistence | `data/NotificationRepository.kt`, `QueueItem.kt`, `QueueDao.kt`, `AppDatabase.kt`, `QueueCrypto.kt` | Reuse Room and Keystore-backed encrypted payload storage. Keep policy checks, expiry and terminal deletion intact. |
 | Delivery | `network/WebhookClient.kt` | Reuse JSON POST, bearer authentication, HTTPS enforcement, redirect rejection and sanitized errors. |
 | Retry and recovery | `worker/QueueWorker.kt`, `WorkerScheduler.kt`, `DeliveryCoordinator.kt`, `receiver/BootCompletedReceiver.kt` | Reuse network-constrained work, backoff, periodic recovery, interrupted-send recovery and delivery cancellation. |
-| Receiver | Repository root `webhook/server.js`, `webhook/storage.js` | Authenticates and validates requests, commits accepted payloads to local SQLite before acknowledging them, and emits receipt-only logs. It remains synthetic-test storage without processing or deduplication. |
+| Receiver | Repository root `webhook/server.js`, `webhook/storage.js` | Authenticates and validates requests, commits accepted payloads to local SQLite before acknowledging them, and emits receipt-only logs. It remains synthetic-test storage without event deduplication or a finance ledger. |
+| Hermes worker | `webhook/hermes-worker.js` | Claims saved receipts with SQLite leases, invokes the dedicated `finance-notifications` profile through the Windows Hermes CLI, validates a constrained draft classification, and records bounded retry state in `hermes_processing`. |
 | Security evidence | Repository root `SECURITY_AUDIT.md`, `HIGH_SEVERITY_FIX_IMPLEMENTATION_REPORT.md` | Preserve implemented hardening and complete the documented runtime checks before relying on the app for banking notifications. |
 
 The existing graph is useful for navigation but predates security changes. Current source takes precedence over graph descriptions and older screenshots.
@@ -43,7 +44,7 @@ The existing graph is useful for navigation but predates security changes. Curre
 1. **Content filtering is not implemented.** Package allowlisting also admits login, promotion, OTP/TAC and approval notifications from those apps. Add source-specific sensitive-content rejection before persistence or transmission. Build rules from observed, redacted formats; an app allowlist alone is insufficient.
 2. **Expanded text is not forwarded.** The listener reads `EXTRA_BIG_TEXT` for duplicate detection but only queues `EXTRA_TEXT`. Preserve expanded text when it contains the payment details.
 3. **There is no persistent event ID.** `notificationKey` identifies an Android notification, which can be updated. It is not a unique financial transaction identifier. In-memory callback suppression is not durable ingestion deduplication.
-4. **The receiver does not process or deduplicate events.** It now retains accepted events locally, but it has no Hermes processing state, application encryption or persistent Android event ID. Use it only for synthetic transport checks until the Hermes ingestion contract exists.
+4. **The receiver does not provide finance-grade deduplication or protection.** The worker now processes saved receipts and records draft classifications, but the Android app still has no persistent event ID, the receiver database is not application-encrypted, and duplicate Android callbacks remain separate receipts. Use the bridge only for synthetic testing until the ingestion and storage contract is hardened.
 5. **Delivery has bounded retention and retries.** Default retention is 24 hours; expiry, permanent failure and exhausted retries delete content. This is not a lossless financial ledger.
 6. **Android runtime validation remains outstanding in the implementation report.** The audit and source fixes are not proof of a working release on the S23 Ultra.
 
@@ -59,7 +60,7 @@ Use the repository Gradle wrapper with a compatible JDK and Android SDK. The pro
 
 The debug APK should be produced at `app/build/outputs/apk/debug/app-debug.apk`. Use synthetic notifications for initial testing. For ongoing use, create a personally signed release and retain its signing key for future updates.
 
-### 2. Prepare a synthetic receiver on Hermes
+### 2. Prepare the local synthetic receiver
 
 From `webhook/`, install dependencies using `npm ci`, copy `.env.example` to `.env`, replace the example bearer token with a generated secret and configure:
 
@@ -74,7 +75,7 @@ DATABASE_PATH=./data/notifications.sqlite
 
 Run `npm run start` from that directory. Put the receiver behind an HTTPS reverse proxy with a certificate trusted by the phone; keep the Node port private and disable request-content logging. Use the exact final endpoint because the app rejects redirects.
 
-The hostname and private-network access mechanism remain deployment decisions. If a private network such as Tailscale is chosen, verify connectivity from the phone on mobile data as well as home Wi-Fi. Preserve HTTPS and bearer authentication. Stop the receiver before copying its SQLite database between machines.
+For the old-laptop test, the user runs the receiver on `127.0.0.1:3000` and exposes it temporarily with ngrok. The ngrok URL is ephemeral; append `/webhook` in the phone app. Preserve HTTPS and bearer authentication. Stop the receiver before copying its SQLite database between machines. A stable hostname, tunnel service policy and unattended startup remain deployment decisions.
 
 ### 3. Configure the existing Android UI
 
@@ -112,7 +113,11 @@ This template works with the current placeholders and omits Android device ID an
 
 Use the webhook test action for connectivity, then generate a synthetic notification from the allowlisted test app to exercise capture, filtering, queueing and delivery. Verify a receiver receipt and the phone's sent counter. Confirm an unlisted app produces no queued or received event.
 
-The receiver stores synthetic payloads locally, so correlate the response receipt ID with the SQLite row during testing. Do not turn raw banking-payload logging on to debug this step.
+The receiver stores synthetic payloads locally, so correlate the response receipt ID with the SQLite row during testing. The user has now confirmed the path through ngrok and a fresh notification. Do not turn raw banking-payload logging on to debug this step.
+
+### 5. Process synthetic receipts with Hermes
+
+The old laptop has Hermes Agent `v0.21.0` installed at the documented Windows CLI location. The user created and tested a separate `finance-notifications` profile configured for Luna. `webhook/hermes-worker.js` reads durable receipts, invokes that profile with quiet stdin chat, validates the complete JSON response, and writes `hermes_processing` rows. It disables all toolsets in the dedicated profile and never passes notification text through a shell. Two real worker runs completed successfully; `npm run process:watch` is now running for new synthetic events. See [webhook/HERMES_SETUP.md](webhook/HERMES_SETUP.md).
 
 ## Second milestone: make real ingestion dependable
 
@@ -205,29 +210,60 @@ The checkout currently has `origin` pointing to `https://github.com/YipKean/Noti
 | Security audit and high-severity fixes | Documented; runtime verification still outstanding |
 | Existing capture, encrypted queue and HTTPS transport | Present in source |
 | Phone installation and Discord notification delivery | User-confirmed on 2026-09-16; Instagram configured as test source |
-| Local durable receiver | Implemented; 17 automated tests pass and parent review found no blocking issues for synthetic testing |
-| Synthetic phone-to-Hermes verification | Next milestone; not established by this document |
+| Local durable receiver | Implemented; laptop health, ngrok HTTPS delivery and fresh phone capture confirmed by the user |
+| Synthetic phone-to-Hermes verification | Complete for two receipts; worker and receiver suites report 27 passing tests |
+| Windows sign-in startup and crash recovery | Installed and tested on the hosting laptop; real reboot/sign-in and sleep/resume tests outstanding |
 | Sensitive-content filters, expanded-text payload and persistent event IDs | Planned changes |
-| Durable Hermes ingestion and idempotency | Planned |
+| Durable Hermes ingestion and idempotency | Draft worker state exists; event-level idempotency and finance-grade storage remain planned |
 | Model parsing, finance database and analytics | Deferred |
 
-The Discord result establishes basic delivery to Discord from the installed app. It does not establish local SQLite receipt, Hermes processing, or the full background/recovery acceptance checklist. No receiver deployment, commit or push has been performed in this work.
+The earlier Discord result established basic delivery to Discord. The later ngrok and Hermes runs establish the synthetic local receipt and classification path, but not the full background/recovery acceptance checklist or a finance ledger. The receiver and supervised services are deployed on the laptop. No commit or push was performed during the startup/recovery work.
 
 ## Windows laptop handoff
 
-The user selected their old Windows laptop, where Hermes is already installed, as the eventual receiver host. Inspection of the local sibling `poly-agent` project's `project.md` and `SETUP.md` confirmed its native Windows Hermes Desktop integration, a documented Hermes 0.21.0 runtime, and the CLI path `%LOCALAPPDATA%\hermes\bin\hermes.exe`. This is evidence about that project's configuration; the old laptop's actual installation and version still need verification.
+The user selected their old Windows laptop, where Hermes is already installed, as the receiver host. The user verified Hermes Agent `v0.21.0` and the CLI path `%LOCALAPPDATA%\hermes\bin\hermes.exe`, then created the separate `finance-notifications` profile.
 
-Continue in this order:
+Completed on the old laptop:
 
-1. Transfer the reviewed receiver source and lockfile to the laptop. These changes are currently uncommitted; cloning the existing remote alone will not include them. Keep secrets and databases out of Git. Install Node 24.13.0 or a later Node 24 patch, run `npm ci` and `npm test` from `webhook/`, create `.env` without overwriting existing settings, and configure the local bearer token and database path. See [SETUP.md](SETUP.md#5-receiver-requirements).
-2. Start the receiver on localhost and send a synthetic request. Correlate its receipt ID with the SQLite row, restart the receiver and confirm persistence. Stop the receiver before copying an existing database. Laptop execution remains unverified until these checks pass there.
-3. Choose and configure phone-reachable HTTPS access with a trusted certificate and no redirects. Hostname and access method are still undecided. Keep the Node listener private, preserve bearer authentication and disable proxy access logging.
-4. Change the phone from Discord to the receiver's final HTTPS URL, select POST and Bearer, and clear the Discord query parameters and payload template. Save the settings, test the webhook, then enable forwarding and save again. Keep `com.instagram.android` as the test source. Confirm both the webhook test and a fresh notification are stored in SQLite; test Wi-Fi and mobile-data reachability.
-5. After transport passes, prepare a separate proposed `finance-notifications` Hermes profile and processing task. Do not repurpose poly-agent's `lol-control` or `lol-memory` profiles. Hermes processing has not been implemented or configured for this project.
+1. The receiver source and lockfile were transferred; Node 24 was installed, `npm ci` and the test suite passed, and `.env` plus the local database were preserved.
+2. The localhost health endpoint and authenticated webhook were verified.
+3. ngrok supplied temporary phone-reachable HTTPS. The phone uses the final ngrok URL plus `/webhook`, POST, Bearer auth, empty query parameters and an empty payload template.
+4. The dedicated `finance-notifications` profile was created and tested with Luna. The worker processed two receipts and saved completed classifications.
 
-Before banking use, implement sensitive-content rejection, expanded notification text, persistent Android event IDs and receiver retry deduplication. Storage protection and retention also need decisions before retaining real financial notifications. The current receiver is synthetic-test storage, with no application encryption, automatic deletion or processing worker.
+5. Windows task `NotificationForwarder-Laptop` now supervises the receiver, ngrok and worker. It starts at user sign-in and has a one-minute repeating recovery trigger. Service crashes, supervisor termination, child cleanup, duplicate starts and Stop/Start were tested. The existing ngrok hostname is preserved. Root-level Start, Stop, Status and Install Startup commands are available; Stop disables automatic startup until Start re-enables it. See [startup operations and verification](webhook/windows/README.md).
+
+### Next work, in order
+
+Latest user acceptance: after receiving instructions to compare `npm run process:status` before and after a test notification and inspect `npm run process:results`, the user reported "Tested. Looks good." This confirms their webhook receipt test succeeded. No new counts, output or explicit reboot/sleep-resume confirmation were supplied; the earlier failed-receipt snapshot and outstanding recovery checks remain unchanged.
+
+1. Reboot testing is complete, as confirmed by the user on 2026-09-18. Only the separate sleep/resume check remains unconfirmed. Confirm new synthetic receipts are processed after resume without manually opening terminals.
+2. Diagnose the three `hermes_failed` receipts seen at the last check (15 completed, 3 failed). Inspect safe error information and provider/profile availability before deciding whether to retry; do not silently reset failed rows.
+3. Implement sensitive-content rejection before queueing or model submission, with synthetic OTP and credential fixtures. Add expanded-text support with the same filtering rules.
+4. Add persistent Android event IDs and atomic receiver deduplication. Verify that a lost acknowledgement and retry create one receipt; handle repeated notification updates separately without merging legitimate identical purchases.
+5. Decide and implement receiver storage protection and retention, then build a structured expense ledger with review/correction of ambiguous classifications. Complete the remaining device/security acceptance checks before regular banking use.
+6. Only after records are trustworthy, consider Telegram expense queries as described below.
+
+### Telegram expense queries — discussed, not authorized for implementation
+
+The user asked whether Telegram could be used to ask Hermes about expense records and explicitly requested discussion only. No Telegram bot, token, integration or messaging was set up.
+
+Proposed design: an authenticated Telegram user asks a question; a laptop bot queries the expense ledger read-only; database queries compute totals; Hermes interprets the request and formats the answer. Restrict access to the user's Telegram ID and use a separate query profile, preserving the restricted `finance-notifications` parser. Polling could avoid adding another public inbound endpoint. The laptop must be awake and online. Current notification receipts and draft classifications are not yet a verified expense ledger. These are proposed choices, not implemented features or final user-approved requirements.
+
+Before banking use, implement sensitive-content rejection, expanded notification text, persistent Android event IDs and receiver retry deduplication. Storage protection and retention also need decisions before retaining real financial notifications. The current receiver and worker are synthetic-test components; the worker's classification is a draft, not a verified transaction record.
 
 ## Local references
+
+### 2026-09-18 processing worker
+
+`webhook/hermes-worker.js` reads durable receipts and uses the dedicated Hermes
+profile through the CLI. It records validated draft classifications, parser version,
+processing leases and bounded retry state in `hermes_processing`.
+It disables all toolsets in that profile before processing and passes notification
+text via stdin. See [HERMES_SETUP.md](webhook/HERMES_SETUP.md) for deployment and
+verification. This supersedes earlier statements that no worker exists; it does
+not complete event deduplication, sensitive filtering or finance-ledger storage.
+Automated tests use a fake classifier; the user separately confirmed live Luna
+processing on the old laptop for two synthetic receipts.
 
 - [Setup and supported configuration](README.md)
 - [Security audit](SECURITY_AUDIT.md)
