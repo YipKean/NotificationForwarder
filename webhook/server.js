@@ -3,6 +3,7 @@ const fs = require("node:fs");
 const path = require("node:path");
 const express = require("express");
 const dotenv = require("dotenv");
+const { evaluate: filterSensitiveNotification } = require("./sensitive-notification-filter");
 const { DEFAULT_DATABASE_PATH, openNotificationStore } = require("./storage");
 
 const EXAMPLE_BEARER_TOKEN = "replace-with-a-long-random-token";
@@ -31,7 +32,8 @@ function loadConfig( environment ) {
 		webhookPath: configuredEnvironment.WEBHOOK_PATH || "/webhook",
 		bearerToken: ( configuredEnvironment.WEBHOOK_BEARER_TOKEN || "" ).trim(),
 		jsonLimit: configuredEnvironment.JSON_LIMIT || "1mb",
-		databasePath: configuredEnvironment.DATABASE_PATH || DEFAULT_DATABASE_PATH
+		databasePath: configuredEnvironment.DATABASE_PATH || DEFAULT_DATABASE_PATH,
+		sourceId: configuredEnvironment.WEBHOOK_SOURCE_ID === undefined ? "personal-phone" : configuredEnvironment.WEBHOOK_SOURCE_ID
 	};
 }
 
@@ -50,7 +52,8 @@ function validateConfig( config ) {
 		config.bearerToken &&
 		config.bearerToken !== EXAMPLE_BEARER_TOKEN &&
 		typeof config.databasePath === "string" &&
-		config.databasePath
+		config.databasePath &&
+		typeof config.sourceId === "string" && config.sourceId.trim()
 	);
 }
 
@@ -107,10 +110,12 @@ function isValidPayload( payload ) {
 
 	const allowedFields = new Set( [
 		"schemaVersion",
+		"eventId",
 		"packageName",
 		"appName",
 		"title",
 		"text",
+		"bigText",
 		"postedAt",
 		"deviceId",
 		"notificationKey"
@@ -124,15 +129,17 @@ function isValidPayload( payload ) {
 		!isValidString( payload.appName, 512 ) ||
 		!isValidString( payload.title, 65536 ) ||
 		!isValidString( payload.text, 65536 ) ||
+		!isValidString( payload.eventId, 128, false ) ||
 		!Number.isSafeInteger( payload.postedAt ) ||
 		payload.postedAt < 0
 	) {
 		return false;
 	}
 
-	if ( payload.schemaVersion !== undefined && payload.schemaVersion !== 1 ) {
+	if ( payload.schemaVersion !== 2 || !/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(payload.eventId) ) {
 		return false;
 	}
+	if (payload.bigText !== undefined && payload.bigText !== null && !isValidString(payload.bigText, 65536)) return false;
 	if ( payload.deviceId !== undefined && !isValidString( payload.deviceId, 4096 ) ) {
 		return false;
 	}
@@ -141,6 +148,21 @@ function isValidPayload( payload ) {
 	}
 
 	return true;
+}
+
+function normalizePayload( payload ) {
+	return {
+		schemaVersion: 2,
+		eventId: payload.eventId.toLowerCase(),
+		packageName: payload.packageName,
+		appName: payload.appName,
+		title: payload.title,
+		text: payload.text,
+		bigText: payload.bigText || null,
+		postedAt: payload.postedAt,
+		...( payload.deviceId === undefined ? {} : { deviceId: payload.deviceId } ),
+		...( payload.notificationKey === undefined ? {} : { notificationKey: payload.notificationKey } )
+	};
 }
 
 function createApp( { config = loadConfig(), storage = null } = {} ) {
@@ -166,6 +188,7 @@ function createApp( { config = loadConfig(), storage = null } = {} ) {
 					code: "invalid_payload"
 				} );
 			}
+			if (filterSensitiveNotification( req.body )) return res.status(422).json({ ok: false, message: "Sensitive notification rejected.", code: "sensitive_notification" });
 			if ( !storage ) {
 				return res.status( 503 ).json( {
 					ok: false,
@@ -177,7 +200,12 @@ function createApp( { config = loadConfig(), storage = null } = {} ) {
 			const receiptId = crypto.randomUUID();
 			const receivedAt = new Date().toISOString();
 			try {
-				storage.insert( receiptId, receivedAt, JSON.stringify( req.body ) );
+				const payloadJson = JSON.stringify( normalizePayload( req.body ) );
+				const payloadHash = crypto.createHash( "sha256" ).update( payloadJson ).digest( "hex" );
+				const result = storage.insertOrResolve( config.sourceId, req.body.eventId.toLowerCase(), receiptId, receivedAt, payloadJson, payloadHash );
+				if (result.conflict) return res.status(409).json({ ok: false, message: "Event ID already exists with different content.", code: "event_id_conflict" });
+				console.log( JSON.stringify( { receiptId: result.receiptId, receivedAt, outcome: result.duplicate ? "duplicate" : "accepted" } ) );
+				return res.status(200).json({ ok: true, message: "Webhook received.", receiptId: result.receiptId, duplicate: result.duplicate });
 			} catch ( error ) {
 				return res.status( 503 ).json( {
 					ok: false,
@@ -186,8 +214,6 @@ function createApp( { config = loadConfig(), storage = null } = {} ) {
 				} );
 			}
 
-			console.log( JSON.stringify( { receiptId, receivedAt, outcome: "accepted" } ) );
-			return res.status( 200 ).json( { ok: true, message: "Webhook received.", receiptId } );
 		}
 	);
 

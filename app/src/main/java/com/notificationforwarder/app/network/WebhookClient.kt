@@ -1,6 +1,6 @@
 package com.notificationforwarder.app.network
 
-import com.google.gson.Gson
+import com.google.gson.GsonBuilder
 import com.google.gson.JsonParser
 import com.notificationforwarder.app.data.NotificationPayload
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
@@ -25,7 +25,7 @@ sealed class PreparedWebhookRequest {
 }
 
 class WebhookClient {
-    private val gson = Gson()
+    private val gson = GsonBuilder().serializeNulls().create()
     private val client: OkHttpClient = OkHttpClient.Builder()
         .connectTimeout(15, TimeUnit.SECONDS)
         .readTimeout(20, TimeUnit.SECONDS)
@@ -50,12 +50,17 @@ class WebhookClient {
             if (method.uppercase() !in SUPPORTED_METHODS) {
                 return PreparedWebhookRequest.Rejected(SendResult(false, true, "invalid_method"))
             }
+            val eventId = item.eventId?.takeIf { it.matches(UUID_V4) }
+                ?: return PreparedWebhookRequest.Rejected(SendResult(false, true, "invalid_event_id"))
             val vars = mapOf(
-                "deviceId" to deviceId,
+                "deviceId" to escapeJson(deviceId),
                 "packageName" to escapeJson(item.packageName),
                 "appName" to escapeJson(item.appName),
                 "title" to escapeJson(item.title),
                 "text" to escapeJson(item.text),
+                "bigText" to escapeJson(item.bigText.orEmpty()),
+                "bigTextJson" to gson.toJson(item.bigText),
+                "eventId" to escapeJson(eventId),
                 "postedAt" to item.postedAt.toString(),
                 "notificationKey" to escapeJson(item.notificationKey)
             )
@@ -64,11 +69,14 @@ class WebhookClient {
             val bodyJson = if (payloadTemplate.isBlank()) {
                 gson.toJson(
                     mapOf(
+                        "schemaVersion" to 2,
+                        "eventId" to eventId,
                         "deviceId" to deviceId,
                         "packageName" to item.packageName,
                         "appName" to item.appName,
                         "title" to item.title,
                         "text" to item.text,
+                        "bigText" to item.bigText,
                         "postedAt" to item.postedAt,
                         "notificationKey" to item.notificationKey
                     )
@@ -153,27 +161,21 @@ class WebhookClient {
     }
 
     private fun renderTemplate(template: String, vars: Map<String, String>): String {
-        var result = template
-        vars.forEach { (k, v) ->
-            result = result.replace("{$k}", v)
-        }
+        val token = Regex("\\{([A-Za-z][A-Za-z0-9]*)\\}")
+        val result = token.replace(template) { match -> vars[match.groupValues[1]] ?: match.value }
         // validate JSON to catch syntax errors early
         JsonParser.parseString(result)
         return result
     }
 
     private fun escapeJson(text: String): String {
-        return text
-            .replace("\\", "\\\\")
-            .replace("\"", "\\\"")
-            .replace("\b", "\\b")
-            .replace("\n", "\\n")
-            .replace("\r", "\\r")
-            .replace("\t", "\\t")
+        val encoded = gson.toJson(text)
+        return encoded.substring(1, encoded.length - 1)
     }
 
     companion object {
         private val SUPPORTED_METHODS = setOf("GET", "POST", "PUT", "PATCH")
+        private val UUID_V4 = Regex("^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$", RegexOption.IGNORE_CASE)
     }
 }
 

@@ -1,0 +1,713 @@
+[
+  {
+    "name": "otp-title",
+    "packageName": "com.example.bank",
+    "title": "Your OTP is 123456",
+    "text": "MYR 18.90 paid",
+    "bigText": null,
+    "blocked": true,
+    "ruleId": "otp_one_time_password"
+  },
+  {
+    "name": "otp-text",
+    "packageName": "com.example.bank",
+    "title": "Payment successful",
+    "text": "Your OTP is 123456",
+    "bigText": null,
+    "blocked": true,
+    "ruleId": "otp_one_time_password"
+  },
+  {
+    "name": "otp-bigText",
+    "packageName": "com.example.bank",
+    "title": "Payment successful",
+    "text": "MYR 18.90 paid",
+    "bigText": "Your OTP is 123456",
+    "blocked": true,
+    "ruleId": "otp_one_time_password"
+  },
+  {
+    "name": "tac-title",
+    "packageName": "com.example.bank",
+    "title": "Your TAC is 654321",
+    "text": "MYR 18.90 paid",
+    "bigText": null,
+    "blocked": true,
+    "ruleId": "otp_one_time_password"
+  },
+  {
+    "name": "tac-text",
+    "packageName": "com.example.bank",
+    "title": "Payment successful",
+    "text": "Your TAC is 654321",
+    "bigText": null,
+    "blocked": true,
+    "ruleId": "otp_one_time_password"
+  },
+  {
+    "name": "tac-bigText",
+    "packageName": "com.example.bank",
+    "title": "Payment successful",
+    "text": "MYR 18.90 paid",
+    "bigText": "Your TAC is 654321",
+    "blocked": true,
+    "ruleId": "otp_one_time_password"
+  },
+  {
+    "name": "one-time-title",
+    "packageName": "com.example.bank",
+    "title": "One-time password: 123456",
+    "text": "MYR 18.90 paid",
+    "bigText": null,
+    "blocked": true,
+    "ruleId": "otp_one_time_password"
+  },
+  {
+    "name": "one-time-text",
+    "packageName": "com.example.bank",
+    "title": "Payment successful",
+    "text": "One-time password: 123456",
+    "bigText": null,
+    "blocked": true,
+    "ruleId": "otp_one_time_password"
+  },
+  {
+    "name": "one-time-bigText",
+    "packageName": "com.example.bank",
+    "title": "Payment successful",
+    "text": "MYR 18.90 paid",
+    "bigText": "One-time password: 123456",
+    "blocked": true,
+    "ruleId": "otp_one_time_password"
+  },
+  {
+    "name": "malay-password-title",
+    "packageName": "com.example.bank",
+    "title": "Kata laluan sekali guna anda 123456",
+    "text": "MYR 18.90 paid",
+    "bigText": null,
+    "blocked": true,
+    "ruleId": "otp_one_time_password"
+  },
+  {
+    "name": "malay-password-text",
+    "packageName": "com.example.bank",
+    "title": "Payment successful",
+    "text": "Kata laluan sekali guna anda 123456",
+    "bigText": null,
+    "blocked": true,
+    "ruleId": "otp_one_time_password"
+  },
+  {
+    "name": "malay-password-bigText",
+    "packageName": "com.example.bank",
+    "title": "Payment successful",
+    "text": "MYR 18.90 paid",
+    "bigText": "Kata laluan sekali guna anda 123456",
+    "blocked": true,
+    "ruleId": "otp_one_time_password"
+  },
+  {
+    "name": "verification-title",
+    "packageName": "com.example.bank",
+    "title": "Your verification code is 123456",
+    "text": "MYR 18.90 paid",
+    "bigText": null,
+    "blocked": true,
+    "ruleId": "verification_code"
+  },
+  {
+    "name": "verification-text",
+    "packageName": "com.example.bank",
+    "title": "Payment successful",
+    "text": "Your verification code is 123456",
+    "bigText": null,
+    "blocked": true,
+    "ruleId": "verification_code"
+  },
+  {
+    "name": "verification-bigText",
+    "packageName": "com.example.bank",
+    "title": "Payment successful",
+    "text": "MYR 18.90 paid",
+    "bigText": "Your verification code is 123456",
+    "blocked": true,
+    "ruleId": "verification_code"
+  },
+  {
+    "name": "malay-code-title",
+    "packageName": "com.example.bank",
+    "title": "Kod pengesahan anda ialah 123456",
+    "text": "MYR 18.90 paid",
+    "bigText": null,
+    "blocked": true,
+    "ruleId": "verification_code"
+  },
+  {
+    "name": "malay-code-text",
+    "packageName": "com.example.bank",
+    "title": "Payment successful",
+    "text": "Kod pengesahan anda ialah 123456",
+    "bigText": null,
+    "blocked": true,
+    "ruleId": "verification_code"
+  },
+  {
+    "name": "malay-code-bigText",
+    "packageName": "com.example.bank",
+    "title": "Payment successful",
+    "text": "MYR 18.90 paid",
+    "bigText": "Kod pengesahan anda ialah 123456",
+    "blocked": true,
+    "ruleId": "verification_code"
+  },
+  {
+    "name": "login-title",
+    "packageName": "com.example.bank",
+    "title": "Login successful",
+    "text": "MYR 18.90 paid",
+    "bigText": null,
+    "blocked": true,
+    "ruleId": "login_notice"
+  },
+  {
+    "name": "login-text",
+    "packageName": "com.example.bank",
+    "title": "Payment successful",
+    "text": "Login successful",
+    "bigText": null,
+    "blocked": true,
+    "ruleId": "login_notice"
+  },
+  {
+    "name": "login-bigText",
+    "packageName": "com.example.bank",
+    "title": "Payment successful",
+    "text": "MYR 18.90 paid",
+    "bigText": "Login successful",
+    "blocked": true,
+    "ruleId": "login_notice"
+  },
+  {
+    "name": "malay-login-title",
+    "packageName": "com.example.bank",
+    "title": "Log masuk telah berjaya",
+    "text": "MYR 18.90 paid",
+    "bigText": null,
+    "blocked": true,
+    "ruleId": "login_notice"
+  },
+  {
+    "name": "malay-login-text",
+    "packageName": "com.example.bank",
+    "title": "Payment successful",
+    "text": "Log masuk telah berjaya",
+    "bigText": null,
+    "blocked": true,
+    "ruleId": "login_notice"
+  },
+  {
+    "name": "malay-login-bigText",
+    "packageName": "com.example.bank",
+    "title": "Payment successful",
+    "text": "MYR 18.90 paid",
+    "bigText": "Log masuk telah berjaya",
+    "blocked": true,
+    "ruleId": "login_notice"
+  },
+  {
+    "name": "signed-in-title",
+    "packageName": "com.example.bank",
+    "title": "You signed in on a new device",
+    "text": "MYR 18.90 paid",
+    "bigText": null,
+    "blocked": true,
+    "ruleId": "login_notice"
+  },
+  {
+    "name": "signed-in-text",
+    "packageName": "com.example.bank",
+    "title": "Payment successful",
+    "text": "You signed in on a new device",
+    "bigText": null,
+    "blocked": true,
+    "ruleId": "login_notice"
+  },
+  {
+    "name": "signed-in-bigText",
+    "packageName": "com.example.bank",
+    "title": "Payment successful",
+    "text": "MYR 18.90 paid",
+    "bigText": "You signed in on a new device",
+    "blocked": true,
+    "ruleId": "login_notice"
+  },
+  {
+    "name": "device-title",
+    "packageName": "com.example.bank",
+    "title": "New device registered successfully",
+    "text": "MYR 18.90 paid",
+    "bigText": null,
+    "blocked": true,
+    "ruleId": "device_verification"
+  },
+  {
+    "name": "device-text",
+    "packageName": "com.example.bank",
+    "title": "Payment successful",
+    "text": "New device registered successfully",
+    "bigText": null,
+    "blocked": true,
+    "ruleId": "device_verification"
+  },
+  {
+    "name": "device-bigText",
+    "packageName": "com.example.bank",
+    "title": "Payment successful",
+    "text": "MYR 18.90 paid",
+    "bigText": "New device registered successfully",
+    "blocked": true,
+    "ruleId": "device_verification"
+  },
+  {
+    "name": "malay-device-title",
+    "packageName": "com.example.bank",
+    "title": "Peranti baharu telah didaftarkan",
+    "text": "MYR 18.90 paid",
+    "bigText": null,
+    "blocked": true,
+    "ruleId": "device_verification"
+  },
+  {
+    "name": "malay-device-text",
+    "packageName": "com.example.bank",
+    "title": "Payment successful",
+    "text": "Peranti baharu telah didaftarkan",
+    "bigText": null,
+    "blocked": true,
+    "ruleId": "device_verification"
+  },
+  {
+    "name": "malay-device-bigText",
+    "packageName": "com.example.bank",
+    "title": "Payment successful",
+    "text": "MYR 18.90 paid",
+    "bigText": "Peranti baharu telah didaftarkan",
+    "blocked": true,
+    "ruleId": "device_verification"
+  },
+  {
+    "name": "device-action-title",
+    "packageName": "com.example.bank",
+    "title": "Verify your device",
+    "text": "MYR 18.90 paid",
+    "bigText": null,
+    "blocked": true,
+    "ruleId": "device_verification"
+  },
+  {
+    "name": "device-action-text",
+    "packageName": "com.example.bank",
+    "title": "Payment successful",
+    "text": "Verify your device",
+    "bigText": null,
+    "blocked": true,
+    "ruleId": "device_verification"
+  },
+  {
+    "name": "device-action-bigText",
+    "packageName": "com.example.bank",
+    "title": "Payment successful",
+    "text": "MYR 18.90 paid",
+    "bigText": "Verify your device",
+    "blocked": true,
+    "ruleId": "device_verification"
+  },
+  {
+    "name": "approve-amount-title",
+    "packageName": "com.example.bank",
+    "title": "Tap to approve MYR 18.90",
+    "text": "MYR 18.90 paid",
+    "bigText": null,
+    "blocked": true,
+    "ruleId": "approval_request"
+  },
+  {
+    "name": "approve-amount-text",
+    "packageName": "com.example.bank",
+    "title": "Payment successful",
+    "text": "Tap to approve MYR 18.90",
+    "bigText": null,
+    "blocked": true,
+    "ruleId": "approval_request"
+  },
+  {
+    "name": "approve-amount-bigText",
+    "packageName": "com.example.bank",
+    "title": "Payment successful",
+    "text": "MYR 18.90 paid",
+    "bigText": "Tap to approve MYR 18.90",
+    "blocked": true,
+    "ruleId": "approval_request"
+  },
+  {
+    "name": "authorize-transfer-title",
+    "packageName": "com.example.bank",
+    "title": "Please authorize this transfer",
+    "text": "MYR 18.90 paid",
+    "bigText": null,
+    "blocked": true,
+    "ruleId": "approval_request"
+  },
+  {
+    "name": "authorize-transfer-text",
+    "packageName": "com.example.bank",
+    "title": "Payment successful",
+    "text": "Please authorize this transfer",
+    "bigText": null,
+    "blocked": true,
+    "ruleId": "approval_request"
+  },
+  {
+    "name": "authorize-transfer-bigText",
+    "packageName": "com.example.bank",
+    "title": "Payment successful",
+    "text": "MYR 18.90 paid",
+    "bigText": "Please authorize this transfer",
+    "blocked": true,
+    "ruleId": "approval_request"
+  },
+  {
+    "name": "approval-complete-title",
+    "packageName": "com.example.bank",
+    "title": "Authorization completed successfully",
+    "text": "MYR 18.90 paid",
+    "bigText": null,
+    "blocked": true,
+    "ruleId": "approval_request"
+  },
+  {
+    "name": "approval-complete-text",
+    "packageName": "com.example.bank",
+    "title": "Payment successful",
+    "text": "Authorization completed successfully",
+    "bigText": null,
+    "blocked": true,
+    "ruleId": "approval_request"
+  },
+  {
+    "name": "approval-complete-bigText",
+    "packageName": "com.example.bank",
+    "title": "Payment successful",
+    "text": "MYR 18.90 paid",
+    "bigText": "Authorization completed successfully",
+    "blocked": true,
+    "ruleId": "approval_request"
+  },
+  {
+    "name": "approval-required-title",
+    "packageName": "com.example.bank",
+    "title": "Approval required",
+    "text": "MYR 18.90 paid",
+    "bigText": null,
+    "blocked": true,
+    "ruleId": "approval_request"
+  },
+  {
+    "name": "approval-required-text",
+    "packageName": "com.example.bank",
+    "title": "Payment successful",
+    "text": "Approval required",
+    "bigText": null,
+    "blocked": true,
+    "ruleId": "approval_request"
+  },
+  {
+    "name": "approval-required-bigText",
+    "packageName": "com.example.bank",
+    "title": "Payment successful",
+    "text": "MYR 18.90 paid",
+    "bigText": "Approval required",
+    "blocked": true,
+    "ruleId": "approval_request"
+  },
+  {
+    "name": "malay-approval-title",
+    "packageName": "com.example.bank",
+    "title": "Sila luluskan pembayaran ini",
+    "text": "MYR 18.90 paid",
+    "bigText": null,
+    "blocked": true,
+    "ruleId": "approval_request"
+  },
+  {
+    "name": "malay-approval-text",
+    "packageName": "com.example.bank",
+    "title": "Payment successful",
+    "text": "Sila luluskan pembayaran ini",
+    "bigText": null,
+    "blocked": true,
+    "ruleId": "approval_request"
+  },
+  {
+    "name": "malay-approval-bigText",
+    "packageName": "com.example.bank",
+    "title": "Payment successful",
+    "text": "MYR 18.90 paid",
+    "bigText": "Sila luluskan pembayaran ini",
+    "blocked": true,
+    "ruleId": "approval_request"
+  },
+  {
+    "name": "confirm-action-title",
+    "packageName": "com.example.bank",
+    "title": "Tap to confirm this payment",
+    "text": "MYR 18.90 paid",
+    "bigText": null,
+    "blocked": true,
+    "ruleId": "approval_request"
+  },
+  {
+    "name": "confirm-action-text",
+    "packageName": "com.example.bank",
+    "title": "Payment successful",
+    "text": "Tap to confirm this payment",
+    "bigText": null,
+    "blocked": true,
+    "ruleId": "approval_request"
+  },
+  {
+    "name": "confirm-action-bigText",
+    "packageName": "com.example.bank",
+    "title": "Payment successful",
+    "text": "MYR 18.90 paid",
+    "bigText": "Tap to confirm this payment",
+    "blocked": true,
+    "ruleId": "approval_request"
+  },
+  {
+    "name": "secure2u-title",
+    "packageName": "com.example.bank",
+    "title": "Secure2u verification completed",
+    "text": "MYR 18.90 paid",
+    "bigText": null,
+    "blocked": true,
+    "ruleId": "secure2u_security"
+  },
+  {
+    "name": "secure2u-text",
+    "packageName": "com.example.bank",
+    "title": "Payment successful",
+    "text": "Secure2u verification completed",
+    "bigText": null,
+    "blocked": true,
+    "ruleId": "secure2u_security"
+  },
+  {
+    "name": "secure2u-bigText",
+    "packageName": "com.example.bank",
+    "title": "Payment successful",
+    "text": "MYR 18.90 paid",
+    "bigText": "Secure2u verification completed",
+    "blocked": true,
+    "ruleId": "secure2u_security"
+  },
+  {
+    "name": "security-title",
+    "packageName": "com.example.bank",
+    "title": "Security notice for your account",
+    "text": "MYR 18.90 paid",
+    "bigText": null,
+    "blocked": true,
+    "ruleId": "security_notice"
+  },
+  {
+    "name": "security-text",
+    "packageName": "com.example.bank",
+    "title": "Payment successful",
+    "text": "Security notice for your account",
+    "bigText": null,
+    "blocked": true,
+    "ruleId": "security_notice"
+  },
+  {
+    "name": "security-bigText",
+    "packageName": "com.example.bank",
+    "title": "Payment successful",
+    "text": "MYR 18.90 paid",
+    "bigText": "Security notice for your account",
+    "blocked": true,
+    "ruleId": "security_notice"
+  },
+  {
+    "name": "malay-security-title",
+    "packageName": "com.example.bank",
+    "title": "Keselamatan akaun anda",
+    "text": "MYR 18.90 paid",
+    "bigText": null,
+    "blocked": true,
+    "ruleId": "security_notice"
+  },
+  {
+    "name": "malay-security-text",
+    "packageName": "com.example.bank",
+    "title": "Payment successful",
+    "text": "Keselamatan akaun anda",
+    "bigText": null,
+    "blocked": true,
+    "ruleId": "security_notice"
+  },
+  {
+    "name": "malay-security-bigText",
+    "packageName": "com.example.bank",
+    "title": "Payment successful",
+    "text": "MYR 18.90 paid",
+    "bigText": "Keselamatan akaun anda",
+    "blocked": true,
+    "ruleId": "security_notice"
+  },
+  {
+    "name": "approved-receipt",
+    "title": "",
+    "text": "Payment approved. MYR 18.90 paid to ABC Kopitiam",
+    "bigText": null,
+    "blocked": false,
+    "ruleId": null
+  },
+  {
+    "name": "taco",
+    "title": "",
+    "text": "MYR 18.90 paid to Taco House. Receipt 123456",
+    "bigText": null,
+    "blocked": false,
+    "ruleId": null
+  },
+  {
+    "name": "code-merchant",
+    "title": "",
+    "text": "Code Coffee MYR 12 paid",
+    "bigText": null,
+    "blocked": false,
+    "ruleId": null
+  },
+  {
+    "name": "digits",
+    "title": "",
+    "text": "123456",
+    "bigText": null,
+    "blocked": false,
+    "ruleId": null
+  },
+  {
+    "name": "word-boundaries",
+    "title": "",
+    "text": "tactical optics OTPiano caféOTP",
+    "bigText": null,
+    "blocked": false,
+    "ruleId": null
+  },
+  {
+    "name": "approved-alone",
+    "title": "",
+    "text": "approved",
+    "bigText": null,
+    "blocked": false,
+    "ruleId": null
+  },
+  {
+    "name": "generic-code",
+    "title": "",
+    "text": "Product code ABC-123",
+    "bigText": null,
+    "blocked": false,
+    "ruleId": null
+  },
+  {
+    "name": "empty",
+    "title": "",
+    "text": "",
+    "bigText": null,
+    "blocked": false,
+    "ruleId": null
+  },
+  {
+    "name": "fullwidth",
+    "title": "",
+    "text": "Your ＯＴＰ is 123456",
+    "bigText": null,
+    "blocked": true,
+    "ruleId": "otp_one_time_password"
+  },
+  {
+    "name": "mixed-case",
+    "title": "",
+    "text": "Your oTp is 123456",
+    "bigText": null,
+    "blocked": true,
+    "ruleId": "otp_one_time_password"
+  },
+  {
+    "name": "zero-width-space",
+    "title": "",
+    "text": "Your O​TP is 123456",
+    "bigText": null,
+    "blocked": true,
+    "ruleId": "otp_one_time_password"
+  },
+  {
+    "name": "word-joiner",
+    "title": "",
+    "text": "Your O⁠TP is 123456",
+    "bigText": null,
+    "blocked": true,
+    "ruleId": "otp_one_time_password"
+  },
+  {
+    "name": "bidi-format",
+    "title": "",
+    "text": "Your O‮TP is 123456",
+    "bigText": null,
+    "blocked": true,
+    "ruleId": "otp_one_time_password"
+  },
+  {
+    "name": "soft-hyphen",
+    "title": "",
+    "text": "Your O­TP is 123456",
+    "bigText": null,
+    "blocked": true,
+    "ruleId": "otp_one_time_password"
+  },
+  {
+    "name": "joined-code",
+    "title": "Verification",
+    "text": "code 123456",
+    "bigText": null,
+    "blocked": true,
+    "ruleId": "verification_code"
+  },
+  {
+    "name": "unicode-whitespace",
+    "title": "",
+    "text": "verification code 123456",
+    "bigText": null,
+    "blocked": true,
+    "ruleId": "verification_code"
+  },
+  {
+    "name": "sensitive-wins",
+    "title": "Payment approved. MYR 18.90 paid",
+    "text": "Your OTP is 123456",
+    "bigText": null,
+    "blocked": true,
+    "ruleId": "otp_one_time_password"
+  },
+  {
+    "name": "joined-over-empty-text",
+    "title": "Verification",
+    "text": "",
+    "bigText": "code 123456",
+    "blocked": true,
+    "ruleId": "verification_code"
+  }
+]

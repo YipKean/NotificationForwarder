@@ -65,6 +65,7 @@ import com.notificationforwarder.app.data.NotificationPayload
 import com.notificationforwarder.app.data.QueueEntry
 import com.notificationforwarder.app.data.QueueStats
 import com.notificationforwarder.app.data.QueueStatus
+import java.util.UUID
 import com.notificationforwarder.app.network.WebhookClient
 import com.notificationforwarder.app.settings.AppSettings
 import com.notificationforwarder.app.settings.AuthMode
@@ -225,8 +226,10 @@ private fun MainScreen(settingsStore: SettingsStore) {
                                         appName = "Webhook Test",
                                         title = "Test Notification",
                                         text = "This is a test payload",
-                                        postedAt = System.currentTimeMillis(),
-                                        notificationKey = "test-${System.currentTimeMillis()}"
+                                         postedAt = System.currentTimeMillis(),
+                                         notificationKey = "test-${System.currentTimeMillis()}",
+                                         bigText = null,
+                                         eventId = UUID.randomUUID().toString()
                                     ),
                                     deviceId = "test-device"
                                 ).also { request ->

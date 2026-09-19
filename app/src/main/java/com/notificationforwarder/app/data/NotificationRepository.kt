@@ -7,10 +7,13 @@ import com.notificationforwarder.app.worker.DeliveryCoordinator
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import java.security.MessageDigest
+import java.util.UUID
 
-class NotificationRepository(private val context: Context) {
-    private val dao = AppDatabase.getInstance(context).queueDao()
-    private val settingsStore = SettingsStore(context)
+class NotificationRepository(
+    context: Context,
+    private val dao: QueueDao = AppDatabase.getInstance(context).queueDao(),
+    private val settingsStore: SettingsStore = SettingsStore(context)
+) {
 
     fun canCapture(packageName: String): Boolean {
         val settings = settingsStore.readAll()
@@ -28,10 +31,12 @@ class NotificationRepository(private val context: Context) {
         postedAt: Long,
         notificationKey: String,
         capturedPolicyRevision: Long,
-        capturedAt: Long
+        capturedAt: Long,
+        bigText: String? = null
     ) {
         purgeExpired(capturedAt)
-        val payload = NotificationPayload(packageName, appName, title, text, postedAt, notificationKey)
+        if (SensitiveNotificationFilter.evaluate(packageName, title, text, bigText) != null) return
+        val payload = NotificationPayload(packageName, appName, title, text, postedAt, notificationKey, bigText?.takeIf { it.isNotEmpty() }, UUID.randomUUID().toString())
         DeliveryCoordinator.withState {
             val settings = settingsStore.readAll()
             if (settings.policyRevision != capturedPolicyRevision || !canCaptureWith(settings, packageName)) {
@@ -51,8 +56,7 @@ class NotificationRepository(private val context: Context) {
                 return@withState
             }
             dao.ensureMetrics()
-            dao.insert(
-                QueueItem(
+            val candidate = QueueItem(
                     encryptedPayload = encrypted.ciphertext,
                     iv = encrypted.iv,
                     encryptionVersion = QueueCrypto.FORMAT_VERSION,
@@ -63,28 +67,41 @@ class NotificationRepository(private val context: Context) {
                     createdAt = capturedAt,
                     updatedAt = capturedAt
                 )
-            )
+            val exactDuplicate = dao.findByNotificationKeyDigest(candidate.notificationKeyDigest).any { row ->
+                when (val result = decrypt(row)) {
+                    is DecryptionResult.Success -> result.payload.packageName == payload.packageName &&
+                        result.payload.notificationKey == payload.notificationKey &&
+                        result.payload.postedAt == payload.postedAt &&
+                        result.payload.title == payload.title &&
+                        result.payload.text == payload.text &&
+                        result.payload.bigText?.takeIf { it.isNotEmpty() } == payload.bigText
+                    else -> false
+                }
+            }
+            if (!exactDuplicate) dao.insert(candidate)
         }
     }
 
     suspend fun getPending(limit: Int): List<PendingQueueItem> {
+        return DeliveryCoordinator.withState {
         val now = System.currentTimeMillis()
-        purgeExpired(now)
+        purgeExpiredLocked(now)
         val pending = mutableListOf<PendingQueueItem>()
         dao.getPending(now, limit).forEach { row ->
             when (val result = decrypt(row)) {
-                is DecryptionResult.Success -> pending += result.item(row)
+                is DecryptionResult.Success -> migratedItemLocked(row, result.payload)?.let { pending += it }
                 DecryptionResult.KeyMissing -> {
-                    handleKeyLoss()
-                    return emptyList()
+                    handleKeyLossLocked()
+                    return@withState emptyList()
                 }
-                DecryptionResult.Corrupt -> DeliveryCoordinator.withState {
+                DecryptionResult.Corrupt -> {
                     DeliveryCoordinator.cancelRegisteredCallsLocked(setOf(row.id))
                     dao.deleteCorruptAndCount(row.id)
                 }
             }
         }
-        return pending
+        return@withState pending
+        }
     }
 
     suspend fun getForDelivery(id: Long): PendingQueueItem? {
@@ -97,7 +114,7 @@ class NotificationRepository(private val context: Context) {
             return null
         }
         return when (val result = decrypt(row)) {
-            is DecryptionResult.Success -> result.item(row)
+            is DecryptionResult.Success -> migratedItemLocked(row, result.payload)
             DecryptionResult.KeyMissing -> {
                 handleKeyLossLocked()
                 null
@@ -138,29 +155,27 @@ class NotificationRepository(private val context: Context) {
     fun observeStats(): Flow<QueueStats> = dao.observeStats()
 
     fun observeRecent(limit: Int): Flow<List<QueueEntry>> = dao.observeRecent(limit).map { rows ->
-        purgeExpired()
         val now = System.currentTimeMillis()
         val retention = settingsStore.readAll().retentionHours
         val entries = mutableListOf<QueueEntry>()
+        var keyMissing = false
         for (row in rows) {
-            if (DeliveryCoordinator.withState {
-                    expireIfNeededLocked(row.id, row.createdAt, retention, now)
-                } || (row.expiresAt != null && row.expiresAt <= now)
-            ) {
-                continue
-            }
-            when (val result = decrypt(row)) {
-                is DecryptionResult.Success -> entries += QueueEntry(row.id, result.payload, row.status, row.attemptCount, row.lastErrorCode)
-                DecryptionResult.KeyMissing -> {
-                    handleKeyLoss()
-                    return@map emptyList()
-                }
-                DecryptionResult.Corrupt -> DeliveryCoordinator.withState {
+            val entry = DeliveryCoordinator.withState {
+                val current = dao.findById(row.id) ?: return@withState null
+                if (expireIfNeededLocked(current.id, current.createdAt, retention, now) ||
+                    (current.expiresAt != null && current.expiresAt <= now)) return@withState null
+                when (val result = decrypt(current)) {
+                    is DecryptionResult.Success -> migratedItemLocked(current, result.payload)?.let { QueueEntry(current.id, it.payload, current.status, current.attemptCount, current.lastErrorCode) }
+                    DecryptionResult.KeyMissing -> { keyMissing = true; null }
+                    DecryptionResult.Corrupt -> {
                     DeliveryCoordinator.cancelRegisteredCallsLocked(setOf(row.id))
-                    dao.deleteCorruptAndCount(row.id)
+                    dao.deleteCorruptAndCount(row.id); null
+                    }
                 }
             }
+            if (entry != null) entries += entry
         }
+        if (keyMissing) { handleKeyLoss(); return@map emptyList() }
         entries
     }
 
@@ -237,18 +252,41 @@ class NotificationRepository(private val context: Context) {
         }
     }
 
+    private suspend fun migratedItemLocked(row: QueueItem, decoded: NotificationPayload): PendingQueueItem? {
+        if (decoded.eventId != null && !UUID_V4.matches(decoded.eventId)) {
+            DeliveryCoordinator.cancelRegisteredCallsLocked(setOf(row.id))
+            dao.deleteCorruptAndCount(row.id)
+            return null
+        }
+        if (SensitiveNotificationFilter.evaluate(decoded.packageName, decoded.title, decoded.text, decoded.bigText) != null) {
+            deleteQueueItemLocked(row.id)
+            return null
+        }
+        val eventId = decoded.eventId ?: UUID.randomUUID().toString()
+        val payload = decoded.copy(bigText = decoded.bigText?.takeIf { it.isNotEmpty() }, eventId = eventId)
+        if (payload != decoded) {
+            try {
+                val encrypted = QueueCrypto.encrypt(payload, requireExistingKey = true)
+                if (dao.updateCiphertext(row.id, encrypted.ciphertext, encrypted.iv, QueueCrypto.FORMAT_VERSION) != 1) return null
+            } catch (cancel: kotlinx.coroutines.CancellationException) { throw cancel }
+            catch (_: QueueKeyMissingException) { handleKeyLossLocked(); return null }
+            catch (_: Exception) { return null }
+        }
+        return PendingQueueItem(row.id, payload, row.policyRevision, row.status, row.attemptCount, row.nextRetryAt, row.expiresAt, row.createdAt)
+    }
+
     private fun calculateBackoff(attemptCount: Int): Long = 30_000L * (1L shl attemptCount.coerceAtMost(6)) + (0..4_000).random()
+
+    private companion object {
+        val UUID_V4 = Regex("^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$", RegexOption.IGNORE_CASE)
+    }
 
     private fun digest(value: String): String = MessageDigest.getInstance("SHA-256")
         .digest(value.toByteArray())
         .joinToString("") { byte -> "%02x".format(byte) }
 
     private sealed interface DecryptionResult {
-        data class Success(val payload: NotificationPayload) : DecryptionResult {
-            fun item(row: QueueItem): PendingQueueItem = PendingQueueItem(
-                row.id, payload, row.policyRevision, row.status, row.attemptCount, row.nextRetryAt, row.expiresAt, row.createdAt
-            )
-        }
+        data class Success(val payload: NotificationPayload) : DecryptionResult
 
         data object KeyMissing : DecryptionResult
         data object Corrupt : DecryptionResult

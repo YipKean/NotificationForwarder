@@ -100,7 +100,19 @@ npm start
 
 This requires Node.js 24.13.0 or a later Node 24 patch and npm. The built-in SQLite module is marked experimental by Node and may print a warning. By default the server listens on `127.0.0.1:3000`, accepts authenticated `POST /webhook`, stores accepted payloads in `webhook/data/notifications.sqlite`, and provides `GET /health`. Put a phone-reachable HTTPS reverse proxy in front of it; the local HTTP listener alone is not a usable app endpoint. HTTPS hosting and certificate setup depend on your server environment.
 
-The receiver commits each accepted payload before returning success. It stores the generated receipt ID, UTC receipt time and validated JSON in SQLite, with no public read endpoint and no automatic deletion. The Hermes worker then records draft classification and bounded retry state in `hermes_processing`. Repeated deliveries currently create separate rows because the installed Android app has no persistent event ID. The database is not application-encrypted, so use this receiver and worker for synthetic testing only until ingestion and deployment hardening are complete.
+The receiver requires schema v2 and UUID-v4 event IDs, commits each accepted payload before returning success, and atomically resolves retries by stable `WEBHOOK_SOURCE_ID` plus event ID. A same-content retry returns the original receipt with `duplicate: true`; changed content returns `409 event_id_conflict`. Sensitive security notifications are rejected with `422 sensitive_notification`. Leave the payload template blank for automatic v2 serialization, or use the complete [v2 template in README](README.md#custom-payload-template). The database is not application-encrypted, so use this receiver and worker for synthetic testing only until deployment hardening is complete.
+
+### Coordinated ingestion upgrade
+
+These are deployment instructions; the implementation task does not execute them.
+
+1. Put the phone offline and force-stop the forwarder before replacing either component. **Do not switch forwarding off or save delivery-setting changes to pause it:** those actions intentionally clear pending content. Force-stop prevents new capture until reopening; notifications during that interval may not replay. Existing queue retention still applies.
+2. Stop the receiver and Hermes worker, including automatic supervision, and back up their SQLite database with services stopped. Preserve credentials and the source ID; do not put them in reports.
+3. Upgrade the receiver and phone together, preserving Android application data and the signing identity. Room migrates the existing encrypted queue; safe legacy items receive persisted IDs on access. Sensitive legacy items are discarded deliberately. Receiver migration preserves historical receipts and processing state without inventing historical event IDs.
+4. Keep the existing blank template. If upgrading a custom v1 template, drain the old queue against the old receiver first, then change the template with an empty queue; saving a new template while events are pending deletes them. The strict v2 receiver returns permanent validation failures to old senders.
+5. Start the upgraded services, reopen the upgraded app, reconnect, and verify synthetic rejection, expanded-text preservation and replay of one event ID returning the same receipt before regular use.
+
+For receiver rollback, stop services before restoring a backup; events accepted after that backup need separate reconciliation. Do not downgrade the Android app onto Room v2 data: the old app cannot open it. Prefer a forward fix with compatible v2 components. A deliberate Android reset or supported downgrade migration is outside this change.
 
 To move this receiver to another Windows machine, copy or clone the `webhook/` directory, install Node 24.13.0 or later within the Node 24 line, run `npm ci`, create `.env` from `.env.example` without overwriting an existing file, and set a new local bearer token and database path. Stop the receiver before copying an existing SQLite database. Keep the Node listener on localhost until a later HTTPS reverse-proxy setup is complete.
 

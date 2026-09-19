@@ -2,9 +2,9 @@
 
 ## Boundaries
 
-The Android application captures allowlisted notifications, stores queued payloads in its encrypted Room database, and delivers them through the configured HTTPS client. Hermes owns later validation, processing, deduplication and finance storage.
+The Android application filters allowlisted notifications before persistence, stores accepted captures with UUID-v4 event IDs and optional expanded text in its encrypted Room database, and delivers them through the configured HTTPS client. The receiver owns durable transport deduplication; Hermes owns later classification and future financial transaction reconciliation.
 
-The `webhook/` directory is a separate Node.js synthetic receiver and Hermes bridge. `server.js` owns configuration, HTTP authentication, request validation and the HTTP lifecycle. `storage.js` owns the local SQLite connection, schema initialization and parameterized event inserts. `hermes-worker.js` claims saved receipts, invokes the dedicated Hermes profile, validates draft classifications and records processing state. The system still has no public read route, application-level database encryption or event-level deduplication.
+The `webhook/` directory is a separate Node.js synthetic receiver and Hermes bridge. `server.js` owns configuration, HTTP authentication, strict schema-v2 validation, sensitive-content rejection and the HTTP lifecycle. `storage.js` owns the local SQLite connection, transactional schema migration and atomic insert-or-resolve operations. `hermes-worker.js` claims saved receipts, invokes the dedicated Hermes profile, validates draft classifications and records processing state. The system still has no public read route, application-level receiver database encryption or financial transaction ledger.
 
 ## Data flow
 
@@ -20,11 +20,13 @@ Android notification listener
     -> validated draft classification in hermes_processing
 ```
 
-The receiver writes the response only after SQLite accepts the event. Each request receives a generated UUID and creates one `notification_events` row. The worker asynchronously processes each receipt at least once and persists a constrained draft classification. The Android app currently has no persistent event ID, so repeated delivery can create duplicate rows even when the worker state is durable.
+The receiver returns success only after SQLite commits the event or resolves an already durable copy. Uniqueness is `(source_id, event_id)`; an identical retry returns the original receipt with `duplicate: true`. Reusing an ID with changed content returns `409 event_id_conflict`. The worker asynchronously processes each receipt at least once and persists a constrained draft classification; duplicate ingestion does not reset worker state.
+
+Android Room version 2 changes the notification-key digest index from unique to nonunique. Exact queued captures are compared under delivery coordination; changed captures retain separate immutable event IDs. Missing IDs in safe legacy encrypted payloads are assigned and persisted before use. Sensitive legacy items are deliberately removed, while transient rewrite failures leave the item queued. The existing destructive plaintext-upgrade marker is unchanged.
 
 ## Runtime and configuration
 
-The receiver uses Express, dotenv and Node's built-in `node:sqlite` module. The worker invokes `%LOCALAPPDATA%\hermes\bin\hermes.exe` on Windows with the `finance-notifications` profile and quiet stdin chat; Hermes 0.21 does not support stream-json output. The current laptop exposes the loopback listener through an ephemeral ngrok HTTPS URL. Relative `DATABASE_PATH` values resolve from `webhook/`. The default listener remains `127.0.0.1:3000`.
+The receiver uses Express, dotenv and Node's built-in `node:sqlite` module. `WEBHOOK_SOURCE_ID` defaults to `personal-phone` and identifies the sender authenticated by the single configured bearer credential; it must remain stable across token rotation. Body fields cannot select the source. The worker invokes `%LOCALAPPDATA%\hermes\bin\hermes.exe` on Windows with the `finance-notifications` profile and quiet stdin chat; Hermes 0.21 does not support stream-json output. Relative `DATABASE_PATH` values resolve from `webhook/`. The default listener remains `127.0.0.1:3000`.
 
 Local `.env` variants and SQLite database files are ignored by `webhook/.gitignore`; `.env.example` remains tracked. Do not commit credentials or synthetic event databases.
 
@@ -32,4 +34,6 @@ On the hosting laptop, the `NotificationForwarder-Laptop` scheduled task runs `w
 
 ## Verification and records
 
-`webhook/server.test.js` and `webhook/hermes-worker.test.js` use Node's built-in test runner with temporary SQLite files and subprocesses. The current worker suite plus receiver suite report 27 passing tests. `PROJECT.md` remains the product and delivery plan. `Dairy.md` records implementation decisions and validation evidence.
+Receiver/worker tests use Node's built-in runner, temporary SQLite files and mocked inference. Android tests cover filtering, payload serialization and queue migration. Shared synthetic filter cases live in `test-fixtures/`; production matching stays local and deterministic. Source-specific rules require verified package IDs and redacted formats; generic rules are not a guarantee against every banking notification format.
+
+`PROJECT.md` remains the product plan, `Dairy.md` records chronological evidence, and `INGESTION_HARDENING_IMPLEMENTATION_REPORT.md` records actual checks and pending device acceptance. Graph outputs describe current source/docs; generated files, caches, machine settings, databases and historical screenshots are excluded from extraction. No new production dependency or integration is required by this hardening.

@@ -1,0 +1,12 @@
+# Generated graphs, local runtimes, databases and machine settings are not source.
+graphify-out/
+.gradle/
+**/build/
+**/node_modules/
+**/.env
+**/.env.*
+**/*.sqlite*
+webhook/windows/settings.json
+webhook/windows/bin/
+# Historical UI screenshots predate the security changes; index current source/docs.
+screenshots/

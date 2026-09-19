@@ -25,17 +25,21 @@ function makeConfig( databasePath, overrides = {} ) {
 		bearerToken: "test-secret",
 		jsonLimit: "1mb",
 		databasePath,
+		sourceId: "personal-phone",
 		...overrides
 	};
 }
 
 function makePayload( overrides = {} ) {
 	return {
+		schemaVersion: 2,
+		eventId: "4a4a2f3c-929b-4988-896c-790733d68237",
 		deviceId: "test-device",
 		packageName: "com.test.package",
 		appName: "Test App",
 		title: "Forwarder test",
 		text: "Synthetic notification 001",
+		bigText: null,
 		postedAt: 1735689600000,
 		notificationKey: "test-notification-key",
 		...overrides
@@ -138,14 +142,16 @@ test( "uses explicit configuration without loading an environment file", () => {
 		WEBHOOK_PATH: "/explicit",
 		WEBHOOK_BEARER_TOKEN: "explicit-secret",
 		JSON_LIMIT: "2kb",
-		DATABASE_PATH: "./explicit.sqlite"
+		DATABASE_PATH: "./explicit.sqlite",
+		WEBHOOK_SOURCE_ID: "personal-phone"
 	} ), {
 		host: "127.0.0.1",
 		port: 4321,
 		webhookPath: "/explicit",
 		bearerToken: "explicit-secret",
 		jsonLimit: "2kb",
-		databasePath: "./explicit.sqlite"
+		databasePath: "./explicit.sqlite",
+		sourceId: "personal-phone"
 	} );
 } );
 
@@ -200,7 +206,7 @@ test( "persists the default Android payload and returns its receipt", async () =
 	assert.deepEqual( JSON.parse( rows[ 0 ].payload_json ), payload );
 } );
 
-test( "persists the schema-v1 payload without altering text", async () => {
+test( "rejects the schema-v1 payload", async () => {
 	const databasePath = makeTemporaryDatabasePath();
 	const storage = openNotificationStore( databasePath );
 	const payload = {
@@ -214,13 +220,13 @@ test( "persists the schema-v1 payload without altering text", async () => {
 	try {
 		await withServer( storage, makeConfig( databasePath ), async ( baseUrl ) => {
 			const response = await postJson( baseUrl, payload );
-			assert.equal( response.status, 200 );
+			assert.equal( response.status, 400 );
 		} );
 	} finally {
 		storage.close();
 	}
 
-	assert.deepEqual( JSON.parse( readRows( databasePath )[ 0 ].payload_json ), payload );
+	assert.equal( readRows( databasePath ).length, 0 );
 } );
 
 test( "parses accepted application plus-json media types", async () => {
@@ -251,7 +257,7 @@ test( "rejects invalid payloads and unsupported content types without inserting"
 		makePayload( { title: "x".repeat( 65537 ) } ),
 		makePayload( { postedAt: -1 } ),
 		makePayload( { postedAt: Number.MAX_SAFE_INTEGER + 1 } ),
-		makePayload( { schemaVersion: 2 } ),
+		makePayload( { schemaVersion: 1 } ),
 		makePayload( { notificationKey: 42 } )
 	];
 	try {
@@ -350,7 +356,7 @@ test( "does not log supplied secrets or notification content", async () => {
 	assert.doesNotMatch( logs.join( "\n" ), /BODY_SECRET|QUERY_SECRET|HEADER_SECRET/ );
 } );
 
-test( "repeated requests create separate receipts and rows", async () => {
+test( "repeated requests resolve to one receipt and row", async () => {
 	const databasePath = makeTemporaryDatabasePath();
 	const storage = openNotificationStore( databasePath );
 	const receipts = [];
@@ -365,8 +371,8 @@ test( "repeated requests create separate receipts and rows", async () => {
 	} finally {
 		storage.close();
 	}
-	assert.notEqual( receipts[ 0 ], receipts[ 1 ] );
-	assert.equal( readRows( databasePath ).length, 2 );
+	assert.equal( receipts[ 0 ], receipts[ 1 ] );
+	assert.equal( readRows( databasePath ).length, 1 );
 } );
 
 test( "persists data across a receiver process restart", async () => {
@@ -380,7 +386,8 @@ test( "persists data across a receiver process restart", async () => {
 				webhookPath: process.env.WEBHOOK_PATH,
 				bearerToken: process.env.WEBHOOK_BEARER_TOKEN,
 				jsonLimit: process.env.JSON_LIMIT || "1mb",
-				databasePath: process.env.DATABASE_PATH
+				databasePath: process.env.DATABASE_PATH,
+				sourceId: process.env.WEBHOOK_SOURCE_ID || "personal-phone"
 			},
 			installSignalHandlers: false
 		});
@@ -416,9 +423,19 @@ test( "persists data across a receiver process restart", async () => {
 			body: JSON.stringify( payload )
 		} );
 		assert.equal( firstResponse.status, 200 );
+		const firstReceipt = ( await firstResponse.json() ).receiptId;
 		await stopChild( first.child );
 
 		second = await launchChild( childScript, environment );
+		const replay = await fetch( `http://127.0.0.1:${second.port}/webhook`, {
+			method: "POST",
+			headers: { authorization: "Bearer restart-secret", "content-type": "application/json" },
+			body: JSON.stringify( payload )
+		} );
+		assert.equal( replay.status, 200 );
+		const replayBody = await replay.json();
+		assert.equal( replayBody.receiptId, firstReceipt );
+		assert.equal( replayBody.duplicate, true );
 		await stopChild( second.child );
 		const rows = readRows( databasePath );
 		assert.equal( rows.length, 1 );
