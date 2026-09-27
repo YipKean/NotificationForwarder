@@ -100,6 +100,8 @@ msg={title}
 
 This repository includes a Node.js webhook receiver in `webhook/` for synthetic local testing. It authenticates requests and stores accepted notification payloads in a local SQLite database before acknowledging them.
 
+The browser UI lives in the independent `general-data-dashboard` project. It connects over HTTP; this repository contains only the receiver side of that integration.
+
 ### Setup
 
 ```powershell
@@ -130,6 +132,7 @@ Environment config (`webhook/.env`):
 | `PORT` | Server port |
 | `WEBHOOK_PATH` | Webhook endpoint path |
 | `WEBHOOK_BEARER_TOKEN` | Required bearer token |
+| `DASHBOARD_BEARER_TOKEN` | Optional read token, distinct from the ingestion token |
 | `JSON_LIMIT` | Max JSON body size |
 | `DATABASE_PATH` | SQLite path; relative paths resolve from `webhook/` |
 

@@ -1,5 +1,13 @@
 # Dairy
 
+## 2026-09-28 — Separate reusable dashboard
+
+Reviewed latest commit 693d817 and the partial sibling-project move. Per user clarification, kept receiver source, SQLite/read authorization, tests and Docker image in NotificationForwarder. Moved/adapted the Compose smoke check and Next.js architecture guidance to general-data-dashboard; replaced the broken dashboard CI here with receiver-only CI. The dashboard now connects over HTTP with configurable RECEIVER_URL, runs alone in Compose and uses an independent synthetic browser fixture. Removed identical misplaced read-route copies there. No generic data schema or frontend redesign was introduced.
+
+Updated current ownership records, README and setup guidance. Preserved local credentials, databases, Windows tooling and existing tracked graph caches. Added ignores for new local caches/tooling. No rules.md exists in either project. RTK searches were checked against source; graph inspection showed obsolete appendLog symbols and no current read API. Graphify CLI/module are absent, so incremental refresh remains pending before any requested commit.
+
+Validation: existing receiver suite passed all 20 tests before separation; receiver implementation is unchanged. Validation: receiver suite passed 20/20 tests; receiver Docker image built successfully. Dashboard npm ci, lint/import boundaries, 4 unit tests, production build, typecheck, all 4 Playwright browser tests, and standalone Docker Compose smoke passed. Both repositories passed git diff --check. The initial browser attempt lacked Chromium; installing the pinned browser resolved it. Next.js emitted existing standalone-start and external parent-lockfile warnings; tests and the production container passed. Android source was unchanged and Android checks were not rerun. Graphify CLI/module are unavailable; the existing graph remains stale and refresh is pending before a requested commit. No commit or deployment performed.
+
 ## 2026-09-27 — Next.js growth architecture
 
 Expanded Architecture.md at the user's request with repository ownership, a concrete feature-based Next.js tree, allowed imports, thin routes, server-only transport, client state ownership, contract evolution, receiver-owned migrations, feature-addition steps and enforceable CI requirements. Chose independent packages and explicit HTTP boundaries over a workspace/shared package or generic service framework. Future finance processing remains with Hermes; Next.js owns presentation and request adaptation.

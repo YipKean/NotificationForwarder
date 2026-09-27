@@ -1,6 +1,6 @@
 # Hermes Finance Notification Bridge
 
-Status: updated 2026-09-16. Discord notification delivery is user-confirmed; the local durable receiver is implemented and reviewed. Windows laptop deployment and Hermes processing remain pending.
+Status: updated 2026-09-28. The independent general-data-dashboard owns browser UI and deployment; this repository retains the receiver and its optional authenticated read API. Discord notification delivery is user-confirmed; the local durable receiver is implemented and reviewed. Windows laptop deployment and Hermes processing remain pending.
 
 ## Goal and scope
 
