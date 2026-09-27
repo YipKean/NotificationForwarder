@@ -1,7 +1,7 @@
 # High-Severity Fix Implementation Report
 
 **Date:** 2026-09-15  
-**Scope:** H1-H7 from [`SECURITY_AUDIT.md`](SECURITY_AUDIT.md)  
+**Scope:** H1-H7 from [`SECURITY_AUDIT.md`](../SECURITY_AUDIT.md)  
 **Review target:** Astra  
 **Status:** Implemented in the working tree with Astra review corrections applied; Android build and device/runtime verification remain blocked by the local toolchain.
 

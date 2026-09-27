@@ -126,6 +126,10 @@ class WebhookClient {
                             SendResult(false, true, "redirect_rejected")
                         } else if (it.isSuccessful) {
                             SendResult(true, false, "OK")
+                        } else if (it.code == 404 && it.header("ngrok-error-code") == "ERR_NGROK_3200") {
+                            // An offline tunnel is reported by ngrok as 404, not 503.
+                            // Match its reserved error header, never arbitrary body text.
+                            SendResult(false, false, "HTTP 404 (tunnel_offline)")
                         } else {
                             val permanent = it.code in 400..499 && it.code != 429
                             SendResult(false, permanent, "HTTP ${it.code}")

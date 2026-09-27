@@ -1,8 +1,10 @@
 # Hermes Finance Notification Bridge
 
-Status: updated 2026-09-19. The user previously confirmed the synthetic phone-to-Hermes transport and laptop supervision. Ingestion hardening now adds privacy filtering, expanded text, persistent event IDs and receiver retry deduplication in this checkout. See INGESTION_HARDENING_IMPLEMENTATION_REPORT.md for validation and remaining device checks. This implementation has not been deployed or installed on the phone; banking readiness remains outside this milestone.
+Status: updated 2026-09-26. The retry-retention, batch-continuation and dismissible-snackbar fixes are installed. The follow-up fix for ngrok's offline HTTP 404 / ERR_NGROK_3200 response is also installed and APK-hash verified; settings and queue bytes were preserved. All nine isolated repository tests passed. The user will perform the remaining laptop-disconnect/sleep recovery test. See `tasks/INGESTION_HARDENING_STATUS.md` for the current checkpoint, which supersedes older rollout statements below.
 
 ## Goal and scope
+
+2026-09-22 checkpoint: steps 1–3 are complete, with device-test execution confirmed by the user (raw output not supplied). Luna's repository review and handoff are in `tasks/LUNA_INGESTION_REVIEW_REPORT.md`; graph health and extraction coverage are recorded in `graphify-out/GRAPH_REPORT.md`. Independent implementation sign-off was completed on 2026-09-24 in `tasks/ASTRA_INGESTION_REVIEW_REPORT.md`. Next: coordinated synthetic rollout and end-to-end acceptance. Reproduction instructions remain in `tasks/INGESTION_TEST_STEPS.md`.
 
 Use this NotificationForwarder fork as the Android transport for a personal expense-tracking system. The initial device is a Samsung Galaxy S23 Ultra, with MAE / Maybank and Touch 'n Go eWallet as notification sources.
 
@@ -35,16 +37,16 @@ Paths below are relative to `app/src/main/java/com/notificationforwarder/app/` u
 | Retry and recovery | `worker/QueueWorker.kt`, `WorkerScheduler.kt`, `DeliveryCoordinator.kt`, `receiver/BootCompletedReceiver.kt` | Reuse network-constrained work, backoff, periodic recovery, interrupted-send recovery and delivery cancellation. |
 | Receiver | Repository root `webhook/server.js`, `webhook/storage.js` | Authenticates and validates requests, commits accepted payloads to local SQLite before acknowledging them, and emits receipt-only logs. It deduplicates schema-v2 events by authenticated source and event ID; it remains synthetic-test storage without a finance ledger. |
 | Hermes worker | `webhook/hermes-worker.js` | Claims saved receipts with SQLite leases, invokes the dedicated `finance-notifications` profile through the Windows Hermes CLI, validates a constrained draft classification, and records bounded retry state in `hermes_processing`. |
-| Security evidence | Repository root `SECURITY_AUDIT.md`, `HIGH_SEVERITY_FIX_IMPLEMENTATION_REPORT.md` | Preserve implemented hardening and complete the documented runtime checks before relying on the app for banking notifications. |
+| Security evidence | Repository root `SECURITY_AUDIT.md`, `tasks/HIGH_SEVERITY_FIX_IMPLEMENTATION_REPORT.md` | Preserve implemented hardening and complete the documented runtime checks before relying on the app for banking notifications. |
 
-The graph refresh is prepared but unfinished at this checkpoint; older source paths remain stale. Current source takes precedence over extracted relationships. Historical screenshots are excluded from the planned refresh because they predate the security changes.
+The graph has been refreshed against current source paths. Read its health and extraction limitations in `graphify-out/GRAPH_REPORT.md`; current source takes precedence over extracted relationships. Historical screenshots are excluded because they predate the security changes.
 
 ## Remaining limitations
 
 1. **Rule coverage requires device evidence.** Generic English/Malay OTP/TAC, login/device and approval/security rules run before Android and receiver persistence. Unknown source formats may still evade matching. Package-specific additions require verified package IDs and redacted fixtures; promotions and transaction classification remain Hermes concerns.
 2. **Event identity is not financial identity.** Each accepted capture has a persisted UUID. Exact captures still queued are suppressed, changed notification versions are retained, and retries resolve to one receiver receipt. Repeated callbacks after local deletion and multiple notifications for one real payment still need later financial reconciliation.
 3. **Receiver storage protection is unfinished.** The local SQLite database is not application-encrypted and has no automatic raw-event retention policy or verified expense ledger. Use synthetic data until these decisions and device/security acceptance are complete.
-4. **Delivery has bounded retention and retries.** Default retention is 24 hours; expiry, permanent failure and exhausted retries delete content. This is not a lossless financial ledger.
+4. **Delivery has bounded retention.** Default retention is 24 hours; expiry and permanent failure delete content. Temporary failures no longer delete content at a retry limit in the new checkout. This is not a lossless financial ledger.
 5. **Device acceptance remains separate.** Source changes and automated tests do not establish that the upgraded release works on the S23 Ultra. Follow the report's device checklist and coordinated upgrade runbook.
 
 ## First milestone: configure and prove transport
@@ -161,7 +163,8 @@ The local receiver implements this transport contract. The future finance databa
 | Response or failure | Current phone behavior | Receiver requirement |
 | --- | --- | --- |
 | Any `2xx` | Marks sent and deletes local content | Acknowledge only durable acceptance, including duplicate event IDs. |
-| Network error, `5xx`, `429` | Retries within configured limits | Use for temporary unavailability; do not acknowledge failed persistence. |
+| Network error, `5xx`, `429` | Retains and retries until configured expiry | Use for temporary unavailability; do not acknowledge failed persistence. |
+| `404` with `ngrok-error-code: ERR_NGROK_3200` | Retains and retries until configured expiry | Offline tunnel, including host sleep/network loss; an ordinary 404 remains permanent. |
 | Other `4xx`, including `408` and `409` | Permanent failure; deletes local content | Do not return `409` for an ordinary duplicate. Treat validation/authentication failures as potentially lost events requiring attention. |
 | `3xx` | Permanent redirect rejection | Configure the phone with the final URL. |
 
@@ -175,15 +178,15 @@ Before regular banking use, demonstrate:
 
 - Synthetic content survives capture and JSON serialization, including expanded text, quotes and line breaks.
 - Unlisted apps and sensitive test fixtures never enter the queue or receiver.
-- Offline events remain encrypted and deliver after reconnection within retention and retry limits.
+- Offline events remain encrypted and deliver after reconnection within retention.
 - A Hermes outage followed by recovery drains the queue, including more than one configured batch, without requiring a new notification.
 - A lost response after durable acceptance produces one stored event when the phone retries.
 - A process restart and phone reboot recover pending work; separately test force-stop behavior and reopening the app without assuming missed notifications will replay.
-- Expiry, exhausted retries, invalid authentication and endpoint changes produce the documented deletion behavior and visible safe counters.
+- Transient retries beyond the former limit preserve content; expiry, invalid authentication and endpoint changes retain their documented deletion behavior and safe counters.
 - Screen-off, overnight idle and Wi-Fi/mobile-data transitions work on the S23 Ultra.
 - The security report's HTTPS, redirect, Keystore, backup, upgrade and cancellation checks pass on a built APK.
 
-Default retention intentionally trades recovery time for shorter local storage. Do not switch it off merely to claim reliability: Off removes time-based expiry but does not remove retry exhaustion or other deletion paths. Record failures and reconcile against account records; notifications are inputs to an expense tracker, not an authoritative bank statement.
+Default retention intentionally trades recovery time for shorter local storage. Do not switch it off merely to claim reliability: Off removes time-based expiry but does not remove permanent-failure or policy deletion paths. Record failures and reconcile against account records; notifications are inputs to an expense tracker, not an authoritative bank statement.
 
 ## Later finance processing
 
@@ -233,12 +236,14 @@ Completed on the old laptop:
 
 ### Next work, in order
 
-Latest user acceptance: after receiving instructions to compare `npm run process:status` before and after a test notification and inspect `npm run process:results`, the user reported "Tested. Looks good." This confirms their webhook receipt test succeeded. No new counts, output or explicit reboot/sleep-resume confirmation were supplied; the earlier failed-receipt snapshot and outstanding recovery checks remain unchanged.
+Latest user acceptance (2026-09-25): normal Discord forwarding, OTP rejection and automatic delivery of surviving pending content after server recovery. Most other items reached Failed while the server was still offline. Retry exhaustion deletes content; exact attempt history, why the oldest survived and the origin of the reported 503s remain unverified. See `tasks/INGESTION_HARDENING_STATUS.md` for the next-session handoff. This checkout already hosts the receiver; no cross-machine replacement is needed.
+
+**Immediate priority:** deploy and verify the new retry policy with a controlled multi-item outage and more than one batch without Sync Queue. All nine isolated instrumentation tests passed on the SM-S918B on 2026-09-26; snackbar close, swipe and rapid-tap backlog checks also passed in the isolated app. The main-app fix is built but not installed. See `tasks/INGESTION_TEST_STEPS.md` for the separate synthetic receiver and phone acceptance steps.
 
 1. Reboot testing is complete, as confirmed by the user on 2026-09-18. Only the separate sleep/resume check remains unconfirmed. Confirm new synthetic receipts are processed after resume without manually opening terminals.
-2. Diagnose the three `hermes_failed` receipts seen at the last check (15 completed, 3 failed). Inspect safe error information and provider/profile availability before deciding whether to retry; do not silently reset failed rows.
+2. Diagnose the four failed Hermes receipts in the latest snapshot (33 completed, 4 failed). These backend failures are separate from the phone Failed counter. Inspect safe error information and provider/profile availability before deciding whether to retry; do not silently reset failed rows.
 3. Complete device acceptance of the implemented sensitive-content filter and expanded-text transport; add verified source formats through shared fixtures.
-4. Deploy the persistent-ID/v2 receiver pair through the coordinated runbook, then verify device retry/restart behavior. Financial transaction reconciliation remains separate from transport deduplication.
+4. Finish live verification of the deployed persistent-ID/v2 receiver pair: response-loss replay, process restart, phone reboot and full backlog recovery. Financial transaction reconciliation remains separate from transport deduplication.
 5. Decide and implement receiver storage protection and retention, then build a structured expense ledger with review/correction of ambiguous classifications. Complete the remaining device/security acceptance checks before regular banking use.
 6. Only after records are trustworthy, consider Telegram expense queries as described below.
 
@@ -266,7 +271,7 @@ processing on the old laptop for two synthetic receipts.
 
 - [Setup and supported configuration](README.md)
 - [Security audit](SECURITY_AUDIT.md)
-- [Implemented fixes and remaining validation](HIGH_SEVERITY_FIX_IMPLEMENTATION_REPORT.md)
+- [Implemented fixes and remaining validation](tasks/HIGH_SEVERITY_FIX_IMPLEMENTATION_REPORT.md)
 - [Android build configuration](app/build.gradle.kts)
 - [Notification listener](app/src/main/java/com/notificationforwarder/app/service/AppNotificationListenerService.kt)
 - [Webhook request implementation](app/src/main/java/com/notificationforwarder/app/network/WebhookClient.kt)

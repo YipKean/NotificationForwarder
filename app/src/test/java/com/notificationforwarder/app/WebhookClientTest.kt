@@ -6,8 +6,68 @@ import com.notificationforwarder.app.network.WebhookClient
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import kotlinx.coroutines.runBlocking
+import okhttp3.Call
+import okhttp3.Callback
+import okhttp3.Protocol
+import okhttp3.Request
+import okhttp3.Response
+import okhttp3.ResponseBody.Companion.toResponseBody
+import okio.Timeout
 
 class WebhookClientTest {
+    private fun responseCall(code: Int, ngrokError: String? = null): Call = object : Call {
+        private val request = Request.Builder().url("https://example.test/webhook").build()
+        override fun request() = request
+        override fun enqueue(responseCallback: Callback) {
+            val response = Response.Builder().request(request).protocol(Protocol.HTTP_1_1)
+                .code(code).message("Synthetic response").body("".toResponseBody())
+            ngrokError?.let { response.header("Ngrok-Error-Code", it) }
+            responseCallback.onResponse(this, response.build())
+        }
+        override fun execute(): Response = error("Only async delivery is used")
+        override fun cancel() = Unit
+        override fun isExecuted() = true
+        override fun isCanceled() = false
+        override fun timeout() = Timeout.NONE
+        override fun clone(): Call = responseCall(code, ngrokError)
+    }
+
+    @Test fun offlineNgrok404RemainsRetryableAcrossRepeatedAttempts() = runBlocking {
+        val client = WebhookClient()
+        repeat(12) {
+            val result = client.execute(PreparedWebhookRequest.Ready(responseCall(404, "ERR_NGROK_3200")))
+            assertEquals(false, result.success)
+            assertEquals(false, result.isPermanentFailure)
+            assertEquals("HTTP 404 (tunnel_offline)", result.message)
+        }
+        assertTrue(client.execute(PreparedWebhookRequest.Ready(responseCall(200))).success)
+    }
+
+    @Test fun ordinary404AndOtherClientFailuresRemainPermanent() = runBlocking {
+        val client = WebhookClient()
+        for ((code, header) in listOf(
+            404 to null, 404 to "ERR_NGROK_9999", 401 to null, 403 to null,
+            409 to null, 422 to null, 401 to "ERR_NGROK_3200"
+        )) {
+            val result = client.execute(PreparedWebhookRequest.Ready(responseCall(code, header)))
+            assertEquals(false, result.success)
+            assertTrue(result.isPermanentFailure)
+        }
+    }
+
+    @Test fun serverFailuresAndRateLimitsRetryButRedirectsDoNot() = runBlocking {
+        val client = WebhookClient()
+        for (code in listOf(429, 500, 502, 503, 504)) {
+            val result = client.execute(PreparedWebhookRequest.Ready(responseCall(code)))
+            assertEquals(false, result.success)
+            assertEquals(false, result.isPermanentFailure)
+        }
+        val redirect = client.execute(PreparedWebhookRequest.Ready(responseCall(302)))
+        assertTrue(redirect.isPermanentFailure)
+        assertEquals("redirect_rejected", redirect.message)
+    }
+
     private val payload = NotificationPayload("com.test", "Test", "Title", "short \"quoted\"\nline\u0001", 123L, "key", "expanded 😀\n{postedAt}", "4a4a2f3c-929b-4988-896c-790733d68237")
     private fun body(template: String, item: NotificationPayload = payload): String {
         val prepared = WebhookClient().prepare("https://example.test/webhook", "POST", emptyMap(), emptyMap(), template, item, "device")

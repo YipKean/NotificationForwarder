@@ -30,6 +30,12 @@ abstract class QueueDao {
     @Query("SELECT COUNT(*) FROM notification_queue")
     abstract suspend fun countRows(): Int
 
+    @Query("SELECT EXISTS(SELECT 1 FROM notification_queue WHERE status = 'PENDING')")
+    abstract suspend fun hasPending(): Boolean
+
+    @Query("SELECT MIN(nextRetryAt) FROM notification_queue WHERE status = 'PENDING'")
+    abstract suspend fun nextPendingAt(): Long?
+
     @Query("UPDATE notification_queue SET status = 'PENDING', updatedAt = :now WHERE status = 'SENDING' AND (expiresAt IS NULL OR expiresAt > :now)")
     abstract suspend fun recoverSending(now: Long)
 

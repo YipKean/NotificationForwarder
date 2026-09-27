@@ -65,4 +65,153 @@ Validation: the final receiver rerun passed all 38 tests. The final combined Gra
 
 README, SETUP, PROJECT and Architecture now describe v2 payloads, identity and migration behavior. The coordinated upgrade runbook uses offline/force-stop to preserve the queue: saving forwarding/template settings can clear pending items. Room v2 downgrade is unsupported; prefer a compatible forward fix. No phone installation, deployment, production database changes, live Hermes invocation or commit occurred.
 
-`rules.md` is still missing; existing project guidance was followed. RTK was used from its installed executable because it is absent from PATH. Graphify was installed in an ignored workspace runtime after verifying the skill's package name; static-document semantic extraction and an incremental runner are prepared, but graph refresh and health review are unfinished. Existing graph source paths remain stale. See `INGESTION_HARDENING_IMPLEMENTATION_REPORT.md` and `INGESTION_HARDENING_STATUS.md` for the handoff.
+`rules.md` is still missing; existing project guidance was followed. RTK was used from its installed executable because it is absent from PATH. Graphify was installed in an ignored workspace runtime after verifying the skill's package name; static-document semantic extraction and an incremental runner are prepared, but graph refresh and health review are unfinished. Existing graph source paths remain stale. See `tasks/INGESTION_HARDENING_IMPLEMENTATION_REPORT.md` and `tasks/INGESTION_HARDENING_STATUS.md` for the handoff.
+
+## 2026-09-21 — Migration and repository test completion
+
+At the user's request, completed steps 1 and 2 and prepared phone test instructions. Luna drafted the test expansion; parent review corrected fixture timestamps, digest lookup, assertions and missing integration paths. The suite now contains seven tests for actual v1 migration with encrypted preexisting data and metadata, concurrent display/pending migration, UUID persistence across SENDING and database reopen, failed ciphertext rewrites and retry, sensitive legacy deletion without sent increments, immutable changed captures, sensitive capture rejection and invalid existing IDs. Luna's final read-only review found no actionable issue.
+
+Added an opt-in isolated debug application ID using `-PisolatedIngestionTests=true`. Verified generated APK metadata and instrumentation manifest target `com.notificationforwarder.app.ingestiontest`; the runner uses `.ingestiontest.test`. Normal debug/release IDs are unchanged. Temporary Room databases and per-test preferences provide additional isolation. Tests never reset the Keystore key or invoke network delivery. The USB instructions are in `tasks/INGESTION_TEST_STEPS.md`.
+
+Validation: isolated `:app:assembleDebug :app:testDebugUnitTest :app:lintDebug` passed (52s; unchanged JVM tests were up-to-date), then final `:app:assembleDebugAndroidTest :app:lintDebug` passed (16s) after all test corrections. The existing AGP/SDK compatibility warning remains. Instrumentation was compiled, not executed; the phone should report seven passing tests before runtime acceptance. `git diff --check` passed. No installation, deployment, production DB changes or commit was performed. Graph refresh and end-to-end phone acceptance remain separate pending work, as requested.
+
+## 2026-09-22 — User-confirmed instrumentation pass
+
+The user reported "all passed" after receiving the seven-test USB instructions. Recorded all seven Android migration/repository instrumentation tests as user-confirmed runtime passes. Raw logs and device details were not provided, so this is not an independently observed run. Steps 1–3 are complete. Updated PROJECT, ingestion status, implementation report and test instructions accordingly.
+
+Remaining work: incremental graph refresh and health review, final overall implementation sign-off, coordinated rollout, and separate end-to-end phone acceptance (notification capture, HTTPS delivery, offline retry, response-loss replay, restart and reboot). Passing the isolated suite does not confirm deployment of the upgraded production app or receiver. This turn changed documentation only; no tests were rerun, no deployment occurred and no commit was made. `git diff --check` passed.
+
+## 2026-09-22 — Luna review, graph refresh and Astra handoff
+
+Completed the source review of Android capture, encrypted queue and Room migration, schema-v2 serialization, receiver authentication/validation/filtering/durable SQLite acceptance, transport deduplication, and Hermes worker leases/retries. No confirmed implementation blocker was found. `npm test` passed 38/38, and the independent synthetic receiver review passed filtering, Unicode/joined-field handling, restart durability, bearer-token rotation, concurrent retries, source isolation, conflict handling, serialization and log privacy. The receiver test named “failed commit” was recorded accurately as a pre-insert SQLite abort, not proof of OS-level commit-fault injection. Device instrumentation remains user-reported because raw output was not supplied.
+
+Refreshed the graph using the prepared ignored `.gradle/graphify-runtime` and current checkout. Regenerated `graphify-out/graph.json`, `GRAPH_REPORT.md`, `graph.html`, `manifest.json`, community analysis and labels. Removed stale screenshot, old-machine absolute-path, generated-memory and pre-rename namespace nodes. The first refresh exposed missing semantic document coverage; subsequent extraction added current-document anchors. Final counts, coverage and diagnostic limitations are recorded in the graph report. Added `tasks/LUNA_INGESTION_REVIEW_REPORT.md` with the requirement matrix, evidence/dispositions, rollout limits and explicit Astra review request. Parent review corrected evidence wording and current/historical status distinctions; no production source fix was needed. Astra owns the next independent repository review; rollout and live phone acceptance remain separate. No production deployment, live Hermes invocation, commit or push occurred.
+
+
+## 2026-09-24 — Independent ingestion repository sign-off
+
+Completed the requested independent source/test review of Luna’s handoff. Checked capture/filter ordering, encrypted legacy migration and ID persistence, immutable changed captures, Room migration and isolated tests, schema-v2 serialization, receiver transactions/deduplication, and worker leases/retries. No confirmed actionable implementation blocker was found. Added `tasks/ASTRA_INGESTION_REVIEW_REPORT.md` and synchronized current project/status/report records.
+
+Production source, JVM tests and shared fixtures have no diff from `c76efd1`; the existing instrumentation/build changes were reviewed in full and preserved. Reused recorded 38/38 receiver and 12 JVM passes plus prior build/lint results; no unchanged suite was rerun. The user-reported seven device passes remain distinct from independently observed evidence. Baseline graph integrity check found 647 nodes, 1,049 edges, zero missing sources/dangling endpoints and 17 self-loops; extraction limitations remain.
+
+Repository sign-off is complete. Next: coordinated synthetic rollout and live phone acceptance, including offline/replay/restart/reboot and multi-batch recovery; laptop sleep/resume and historical failed Hermes receipts remain operational follow-up. No deployment, live Hermes operation, production data change, commit or push occurred. `rules.md` remains absent. `git diff --check` passed after the review-record edits; graph documentation refresh results and limitations are recorded in `graphify-out/GRAPH_REPORT.md`.
+
+## 2026-09-25 — Synthetic deployment and outage retry-loss handoff
+
+Confirmed this checkout is on the old laptop hosting the receiver; its scheduled task points here. With services stopped, verified matching SQLite, WAL and SHM backup bytes. Rebuilt the main debug APK with `-PisolatedIngestionTests=false`. Replacement failed because the signing key differed; the user authorized discarding old app data and uninstalled the original. Installed `com.notificationforwarder.app` on the S23 Ultra and restored configuration and notification access. This was a fresh install, not live proof of in-place migration.
+
+Started receiver services. Corrected the phone URL from the tunnel root to `/webhook` after observing 404; subsequently observed 200 responses. Enabled forwarding after finding it disabled. User confirmed normal Discord forwarding and OTP rejection. Database: `webhook/data/notifications.sqlite`; tunnel inspector: `http://127.0.0.1:4040/inspect/http`. Credentials and the active tunnel hostname are omitted. Keep local backups out of commits.
+
+During outage testing the user reported repeated 503s, with all but the oldest queued item eventually entering Failed. The server was restored only after those failures. A manual Sync Queue attempt succeeded; later the user explicitly confirmed surviving pending content delivered automatically shortly after recovery. This proves automatic retry for surviving content, not full backlog recovery. Code treats 503 as transient but deletes content at retry exhaustion; Failed is a counter rather than a recoverable queue. Exact per-item attempts, the oldest-item difference and 503 origin remain unverified. Inspected ngrok history contained two 200 responses and no retained 503 evidence. Stop Forwarder also stops ngrok, so it does not isolate receiver downtime.
+
+Validation during deployment: main debug build and installation succeeded; webhook `npm test` passed 38/38. Existing AGP/SDK warning remains. Latest Hermes status was 33 completed and 4 failed, without per-event attribution; backend processing failures are distinct from phone queue failures. No retry-policy source change was made.
+
+Next session: reproduce a controlled multi-item outage, inspect sanitized retry metadata and scheduling, investigate oldest-item survival, and address transient-outage loss with explicit retention behavior. Preserve encryption, filtering and persistent event IDs. Verify automatic drain beyond one batch without manual sync. Replay/restart/phone reboot, laptop sleep/resume, expanded-text live evidence and remaining device acceptance are still pending. Detailed handoff is in `tasks/INGESTION_HARDENING_STATUS.md`.
+
+Final handoff updates PROJECT, ingestion status and this log only. Existing unrelated changes are preserved; no commit or push. `rules.md` remains absent. Incremental graph refresh remains due before a future commit; the existing graph does not reflect this documentation update.
+
+## 2026-09-26 — Retain transient failures and continue queued batches
+
+Continued the outage handoff using Channeling, Graphify source relationships and
+RTK searches. `rules.md` remains absent. Source confirms retry exhaustion deleted
+transient failures and successful batches did not schedule a successor. The
+reported oldest-item survival and original 503 source remain unproven.
+
+Transient failures now retain encrypted rows until expiry; permanent failures
+still delete and increment Failed. The persisted maxRetries setting now caps
+backoff growth, reflected in the UI label and supporting text. Delay remains
+exponential with jitter, capped at 32 minutes; attempt counts saturate safely.
+The worker persists a successor at the earliest pending due time before returning
+success, including future-due rows and remaining batches. Periodic recovery uses
+KEEP when outside the one-time chain to avoid redundant continuations. Policy
+coordination, filtering, encryption, immutable IDs and intentional deletion remain.
+Created Design.md to record the existing Material interface and retry semantics.
+
+Added two JVM retry-policy tests and two isolated repository regressions for
+five-event outages beyond the former attempt limit, ciphertext preservation,
+database reopen, three-batch repository drain, permanent failure and expiry.
+The repository test advances eligibility explicitly; it is not automatic worker
+or live HTTP evidence. Added a separate synthetic outage receiver on port 3301
+with a temporary database and console-controlled failure switch. Its real HTTP
+test exercised twenty 503 responses, recovery to five distinct receipts and
+duplicate replays. The first test assertion incorrectly expected 401 for a wrong
+bearer token; current authentication returns 403, and the assertion was corrected.
+
+Validation: final combined isolated Gradle unit/build/instrumentation-build/lint
+run passed in 25 seconds after the scheduler adjustment; XML reports show 14 JVM
+tests with zero failures/errors. Instrumentation compiled (nine tests) but was
+not executed because ADB reports no connected device. Targeted Node outage test
+passed. Existing receiver/worker production code is unchanged, so prior 38-test
+evidence is retained rather than rerunning unchanged tests. The existing AGP 8.5.2
+warning for SDK 36 remains. Gradle required approved access to its existing shared
+cache after the sandbox denied its lock file; native Windows RTK commands worked.
+
+No live receiver/database change, installation, uninstall, commit or push occurred.
+Updated architecture, README, project status, continuation and test instructions.
+Next: execute the isolated suite, then deploy and observe automatic multi-batch
+recovery on the phone using the separate outage receiver. Screen-off/restart/reboot
+acceptance remains pending. Existing user changes are preserved. Graph refresh is
+still due before a future commit; the current graph has historical extraction
+limitations and does not include this checkpoint.
+
+## 2026-09-26 — Move task Markdown into `tasks/`
+
+Moved the task-specific implementation reports, review reports, status handoff,
+test instructions and namespace plan into `tasks/`. Kept the project brief,
+README, setup guide, security audit and project records at the repository root.
+Updated project and architecture references, historical diary references and the
+security report's relative link. Refreshed the incremental graph to 735 nodes
+and 1,138 edges; extraction has no semantic nodes for the eight moved task files
+or the existing `Design.md`, and the report retains the documented graphifier
+diagnostic limitations. Validation: checked task-document links and repository
+references, and ran `git diff --check`; no source or runtime behavior changed.
+`rules.md` remains absent.
+
+## 2026-09-26 — Dismissible feedback without a snackbar backlog
+
+Replaced independently queued snackbar calls with one conflated message channel
+and collectLatest presentation. A newer result cancels only the earlier snackbar,
+not its save/network operation. All messages use the Material close action,
+short accessibility-aware timeout and horizontal swipe dismissal in either
+direction. Each message gets fresh swipe state. Kept the existing theme and
+message text; updated Design.md and the device checklist. No dependency added.
+
+Validation: main debug build and lint passed (existing AGP/SDK warning remains).
+All nine isolated queue instrumentation tests passed on SM-S918B / Android 16,
+with XML confirming nine tests, zero failures and zero errors. Gradle removed its
+test packages afterward; installed only the isolated debug app for UI checks.
+After the user left the phone idle, checked Webhook Save validation feedback:
+Dismiss action, left/right swipes, and ten rapid taps with no remaining backlog
+after five seconds. The secure-window flag correctly blocks screenshots, so UI
+verification used hierarchy snapshots; no protection was disabled. Large-font,
+TalkBack and successful-save copy checks remain unobserved. Returned the phone
+to its home screen after the check.
+
+Preserved the built main APK at app/build/outputs/apk/main-debug/app-debug.apk
+before rebuilding the normal debug output as the isolated test app. The main
+forwarder, its settings/data and receiver remain unchanged. No commit or push.
+Existing task-document moves and retry changes were preserved. `git diff --check`
+passed. Graph refresh remains due before a future commit.
+
+## 2026-09-26 — Offline ngrok response classification and installed follow-up
+
+The user reported immediate failures with laptop network loss/sleep. Confirmed
+the previous patch was installed by matching APK hashes. Metadata-only inspection
+found no queue rows, 26 Sent, 12 Failed and 0 Expired; retention was 24 hours and
+forwarding enabled. Original terminal responses were unavailable. Reproduced
+HTTP 404 / ngrok-error-code ERR_NGROK_3200 via a credential-free GET to an unused
+ngrok hostname. Official ngrok documentation identifies 3200 as endpoint offline
+and reserves the error header. This exposed a confirmed classifier gap matching
+the reported outage type, without proving each historical deleted item's cause.
+
+Made only this status/header combination retryable, preserving other permanent
+responses. Added three JVM regressions exercising actual async response handling
+and failure-only QueueDelivery metadata logging (no content, URL or credentials).
+Final 17 JVM tests, main build and lint passed in 21 seconds; the existing SDK/AGP
+warning remains. Installed over the main app with connectivity briefly paused;
+verified settings and queue DB/WAL bytes unchanged and installed APK hash
+1141e6d3b464fa1c1cccfb4b46804cc54ffc001b7e9e5cee5bd216af05dbab35.
+Restored network state and opened the updated app. No live receiver changes,
+notification sends, uninstall, data clear, commit or push. The user requested
+no further agent tests; they will perform live outage/recovery acceptance.
+Graph refresh remains due before a future commit.

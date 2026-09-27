@@ -10,6 +10,9 @@ import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import java.util.concurrent.TimeUnit
+import java.util.UUID
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 object WorkerScheduler {
     private const val QUEUE_SYNC_WORK = "queue_sync_work"
@@ -58,6 +61,26 @@ object WorkerScheduler {
             ExistingPeriodicWorkPolicy.KEEP,
             cleanup
         )
+    }
+
+    suspend fun enqueueContinuation(context: Context, runningId: UUID, delayMillis: Long) = withContext(Dispatchers.IO) {
+        val request = OneTimeWorkRequestBuilder<QueueWorker>()
+            .setConstraints(Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build())
+            .setInitialDelay(delayMillis.coerceAtLeast(0), TimeUnit.MILLISECONDS)
+            .addTag(DELIVERY_TAG)
+            .build()
+        // KEEP would discard this request while the current batch is still running.
+        // Wait for persistence before reporting this batch complete.
+        val manager = WorkManager.getInstance(context)
+        // Periodic recovery is outside this chain: don't append redundant delayed
+        // successors on every periodic tick when one-time work already exists.
+        val inChain = manager.getWorkInfosForUniqueWork(QUEUE_SYNC_WORK).get().any { it.id == runningId }
+        manager.enqueueUniqueWork(
+            QUEUE_SYNC_WORK,
+            if (inChain) ExistingWorkPolicy.APPEND_OR_REPLACE else ExistingWorkPolicy.KEEP,
+            request
+        ).result.get()
+        Unit
     }
 
     fun cancelDelivery(context: Context) {

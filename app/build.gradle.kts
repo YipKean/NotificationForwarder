@@ -19,6 +19,11 @@ android {
     }
 
     buildTypes {
+        debug {
+            if (providers.gradleProperty("isolatedIngestionTests").orNull == "true") {
+                applicationIdSuffix = ".ingestiontest"
+            }
+        }
         release {
             isMinifyEnabled = false
             proguardFiles(

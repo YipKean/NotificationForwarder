@@ -2,6 +2,34 @@
 
 Date: 2026-09-19
 
+### 2026-09-24 independent repository sign-off
+
+Independent source and test review found no confirmed actionable implementation blocker. Repository sign-off is complete; see `ASTRA_INGESTION_REVIEW_REPORT.md`. Production code, JVM tests and shared fixtures are unchanged from the tested checkpoint, so prior passing validation was reused. The seven device tests remain user-reported evidence. Coordinated rollout and live phone acceptance are next; historical pending-review statements below are superseded by this amendment.
+
+### 2026-09-22 Luna review and graph refresh
+
+Luna completed the source review of Android capture, encrypted queue/migration, schema-v2 serialization, receiver storage/deduplication and Hermes worker boundaries. No confirmed implementation blocker remained after the receiver suite and independent synthetic review. `npm test` passed 38/38 and `node .gradle/parent-ingestion-review.cjs` passed. The user-reported seven-test isolated instrumentation pass remains user-reported evidence because raw device output was not supplied. The test named “failed commit” injects a `BEFORE INSERT` SQLite abort, so the evidence proves persistence-failure handling rather than an operating-system commit fault.
+
+The incremental graph refresh used `.gradle/graphify-runtime` and current source paths. Historical screenshots, old-machine absolute paths, generated graph memory and the pre-rename namespace were removed. Current-document semantic extraction was added after the initial refresh exposed missing document coverage. Final counts, coverage and extraction warnings are recorded in `graphify-out/GRAPH_REPORT.md`. Astra’s independent review, coordinated rollout and live phone acceptance remain pending.
+
+See `LUNA_INGESTION_REVIEW_REPORT.md` for the requirement matrix, evidence types, dispositions and explicit Astra review request.
+
+### 2026-09-22 device-test result (historical checkpoint before this review)
+
+The user confirmed "all passed" in response to the seven-test USB instrumentation handoff. Record all seven migration/repository tests as user-confirmed passes; raw output and device details were not supplied for independent inspection. This supersedes the device-execution-pending statements in the historical sections below. Steps 1–3 are complete. Graph refresh, final overall sign-off, coordinated rollout and separate end-to-end phone acceptance remain pending. No production deployment is inferred from the isolated test run.
+
+### 2026-09-21 test completion amendment (runtime status superseded above)
+
+The historical test-source gaps described below have now been addressed in seven instrumentation tests. The v1 fixture sets the database version and includes a pre-migration encrypted row with nondefault policy/retry/error/expiry metadata; the test checks full row preservation and removal of index uniqueness. Repository tests cover concurrent display/pending reads, UUID persistence before eligibility, SENDING delivery and recovery after database reopen, failed ciphertext rewrites and retry, sensitive legacy deletion without sent increments, exact capture suppression with changed app names, independent expanded-text/posting-time changes while the original is sending, sensitive capture rejection and invalid-ID corruption.
+
+Test execution remains pending. Tests use temporary databases and isolated preferences, plus an opt-in debug application ID suffix (`-PisolatedIngestionTests=true`) that isolates storage and Keystore from the user's installed app. `INGESTION_TEST_STEPS.md` gives the USB-device command and cleanup steps. No device was installed or used during this change. Graph refresh and full end-to-end acceptance remain separate pending work.
+
+Validation on 2026-09-21: isolated debug app build, JVM test task and lint passed; final instrumentation APK build and lint passed after all test changes. Existing JVM test results were up-to-date. Generated app/runner manifests confirm the separate test application IDs. Luna reviewed the parent's completed test corrections without further findings. These checks establish compilation and source review, not seven passing device tests.
+
+## Historical implementation detail — 2026-09-19
+
+The numbered sections below preserve the original checkpoint. Statements about incomplete instrumentation, pending device execution and stale graph paths are superseded by the dated amendments above and `LUNA_INGESTION_REVIEW_REPORT.md`.
+
 ## 1. Requirement completion and deviations
 
 Implemented across Android and the receiver:

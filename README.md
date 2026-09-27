@@ -37,7 +37,7 @@ The historical Graphify snapshots under `graphify-out/` retain source paths from
 
 ## Webhook Configuration
 
-Forwarding starts disabled after the security upgrade. Add at least one package to the allowlist and configure an HTTPS webhook before enabling it. Retry retention can be set from 1–24 hours or `OFF` for manual clearing; delivered, permanently failed and expired notification content is deleted.
+Forwarding starts disabled after the security upgrade. Add at least one package to the allowlist and configure an HTTPS webhook before enabling it. Retry retention can be set from 1–24 hours or `OFF` to disable expiry; delivered, permanently failed and expired notification content is deleted. Temporary network, 5xx and 429 failures remain encrypted and retry until expiry. **Backoff growth limit** caps delay growth, not the number of attempts; the delay caps at 32 minutes plus up to four seconds of jitter. Each completed batch schedules remaining pending work automatically, subject to Android background scheduling.
 
 The earlier security upgrade removes the legacy plaintext queue and keeps webhook settings while requiring forwarding to be enabled again. The ingestion-hardening upgrade preserves the existing encrypted queue, filters legacy items and persists missing event IDs before delivery. Existing backups created by older versions are not removed by the app.
 

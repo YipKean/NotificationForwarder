@@ -1,6 +1,7 @@
 package com.notificationforwarder.app.data
 
 import android.content.Context
+import android.util.Log
 import com.notificationforwarder.app.settings.FilterMode
 import com.notificationforwarder.app.settings.SettingsStore
 import com.notificationforwarder.app.worker.DeliveryCoordinator
@@ -139,17 +140,29 @@ class NotificationRepository(
 
     suspend fun markSentLocked(id: Long) = dao.markSentAndDelete(id)
 
-    suspend fun markFailure(id: Long, attemptCount: Int, maxRetry: Int, errorCode: String) {
-        DeliveryCoordinator.withState { markFailureLocked(id, attemptCount, maxRetry, errorCode) }
+    suspend fun hasPending(): Boolean = DeliveryCoordinator.withState {
+        purgeExpiredLocked()
+        dao.hasPending()
     }
 
-    suspend fun markFailureLocked(id: Long, attemptCount: Int, maxRetry: Int, errorCode: String) {
-        if (attemptCount >= maxRetry) {
+    suspend fun nextPendingAtLocked(): Long? {
+        purgeExpiredLocked()
+        return dao.nextPendingAt()
+    }
+
+    suspend fun markFailure(id: Long, attemptCount: Int, maxRetry: Int, errorCode: String, permanent: Boolean) {
+        DeliveryCoordinator.withState { markFailureLocked(id, attemptCount, maxRetry, errorCode, permanent) }
+    }
+
+    suspend fun markFailureLocked(id: Long, attemptCount: Int, maxRetry: Int, errorCode: String, permanent: Boolean) {
+        // Only fixed client error codes and local queue metadata; no payloads or credentials.
+        Log.i("QueueDelivery", "item=$id attempt=$attemptCount permanent=$permanent code=$errorCode")
+        if (permanent) {
             dao.markFailedAndDelete(id)
             return
         }
         val now = System.currentTimeMillis()
-        dao.updateFailure(id, QueueStatus.PENDING, attemptCount, now + calculateBackoff(attemptCount), errorCode, now)
+        dao.updateFailure(id, QueueStatus.PENDING, attemptCount, now + RetryPolicy.backoffMillis(attemptCount, maxRetry), errorCode, now)
     }
 
     fun observeStats(): Flow<QueueStats> = dao.observeStats()
@@ -274,8 +287,6 @@ class NotificationRepository(
         }
         return PendingQueueItem(row.id, payload, row.policyRevision, row.status, row.attemptCount, row.nextRetryAt, row.expiresAt, row.createdAt)
     }
-
-    private fun calculateBackoff(attemptCount: Int): Long = 30_000L * (1L shl attemptCount.coerceAtMost(6)) + (0..4_000).random()
 
     private companion object {
         val UUID_V4 = Regex("^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$", RegexOption.IGNORE_CASE)
