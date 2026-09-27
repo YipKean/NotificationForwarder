@@ -1,0 +1,10 @@
+node_modules
+.next
+.env*
+*.sqlite*
+*.db*
+data
+test-results
+playwright-report
+*.tsbuildinfo
+.git

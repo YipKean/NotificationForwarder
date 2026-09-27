@@ -144,6 +144,7 @@ test( "uses explicit configuration without loading an environment file", () => {
 		port: 4321,
 		webhookPath: "/explicit",
 		bearerToken: "explicit-secret",
+		dashboardToken: "",
 		jsonLimit: "2kb",
 		databasePath: "./explicit.sqlite"
 	} );

@@ -3,6 +3,7 @@ const fs = require("node:fs");
 const path = require("node:path");
 const express = require("express");
 const dotenv = require("dotenv");
+const { installReadRoutes } = require( "./readRoutes" );
 const { DEFAULT_DATABASE_PATH, openNotificationStore } = require("./storage");
 
 const EXAMPLE_BEARER_TOKEN = "replace-with-a-long-random-token";
@@ -30,6 +31,7 @@ function loadConfig( environment ) {
 		port: configuredPort,
 		webhookPath: configuredEnvironment.WEBHOOK_PATH || "/webhook",
 		bearerToken: ( configuredEnvironment.WEBHOOK_BEARER_TOKEN || "" ).trim(),
+		dashboardToken: ( configuredEnvironment.DASHBOARD_BEARER_TOKEN || "" ).trim(),
 		jsonLimit: configuredEnvironment.JSON_LIMIT || "1mb",
 		databasePath: configuredEnvironment.DATABASE_PATH || DEFAULT_DATABASE_PATH
 	};
@@ -46,6 +48,8 @@ function validateConfig( config ) {
 		typeof config.webhookPath === "string" &&
 		config.webhookPath &&
 		config.webhookPath.startsWith( "/" ) &&
+		!/^\/api\/(notifications|notification-apps)(?:\/|$)/i.test( config.webhookPath ) &&
+		( !config.dashboardToken || config.dashboardToken !== config.bearerToken ) &&
 		typeof config.bearerToken === "string" &&
 		config.bearerToken &&
 		config.bearerToken !== EXAMPLE_BEARER_TOKEN &&
@@ -190,6 +194,8 @@ function createApp( { config = loadConfig(), storage = null } = {} ) {
 			return res.status( 200 ).json( { ok: true, message: "Webhook received.", receiptId } );
 		}
 	);
+
+	installReadRoutes( app, config, storage, requireBearerAuth );
 
 	app.use( ( req, res ) => {
 		res.status( 404 ).json( { ok: false, message: "Not found.", code: "not_found" } );
