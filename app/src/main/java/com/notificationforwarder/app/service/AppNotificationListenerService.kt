@@ -5,6 +5,7 @@ import android.os.Build
 import android.service.notification.NotificationListenerService
 import android.service.notification.StatusBarNotification
 import com.notificationforwarder.app.data.NotificationRepository
+import com.notificationforwarder.app.data.SensitiveNotificationFilter
 import com.notificationforwarder.app.settings.FilterMode
 import com.notificationforwarder.app.settings.SettingsStore
 import com.notificationforwarder.app.worker.WorkerScheduler
@@ -12,14 +13,14 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
+import java.security.MessageDigest
 
 class AppNotificationListenerService : NotificationListenerService() {
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     private data class RecentEvent(
-        val contentHash: Int,
-        val postedAt: Long,
-        val seenAt: Long
+        val contentHash: String,
+        val postedAt: Long
     )
 
     private val dedupLock = Any()
@@ -48,6 +49,7 @@ class AppNotificationListenerService : NotificationListenerService() {
         val text = extras?.getCharSequence(Notification.EXTRA_TEXT)?.toString().orEmpty()
         val bigText = extras?.getCharSequence(Notification.EXTRA_BIG_TEXT)?.toString().orEmpty()
 
+        if (SensitiveNotificationFilter.evaluate(item.packageName, title, text, bigText) != null) return
         if (shouldSkip(item, notification, title, text, bigText)) {
             return
         }
@@ -58,6 +60,7 @@ class AppNotificationListenerService : NotificationListenerService() {
                 appName = resolveAppName(item.packageName),
                 title = title,
                 text = text,
+                bigText = bigText.ifEmpty { null },
                 postedAt = item.postTime,
                 notificationKey = item.key,
                 capturedPolicyRevision = capturedPolicyRevision,
@@ -88,24 +91,21 @@ class AppNotificationListenerService : NotificationListenerService() {
         }
 
         val stableKey = buildStableKey(sbn)
-        val contentHash = listOf(title, text, bigText).joinToString("\u001f").hashCode()
-        val now = System.currentTimeMillis()
+        val contentHash = captureDigest(title, text, bigText)
 
         synchronized(dedupLock) {
             val previous = recentEvents[stableKey]
             if (previous != null) {
                 val sameContent = previous.contentHash == contentHash
                 val samePostTime = previous.postedAt == sbn.postTime
-                val burstUpdate = now - previous.seenAt <= DUPLICATE_WINDOW_MS
-                if (sameContent && (samePostTime || burstUpdate)) {
+                if (sameContent && samePostTime) {
                     return true
                 }
             }
 
             recentEvents[stableKey] = RecentEvent(
                 contentHash = contentHash,
-                postedAt = sbn.postTime,
-                seenAt = now
+                postedAt = sbn.postTime
             )
             trimRecentEvents()
         }
@@ -137,8 +137,11 @@ class AppNotificationListenerService : NotificationListenerService() {
         }
     }
 
+    private fun captureDigest(title: String, text: String, bigText: String): String = MessageDigest.getInstance("SHA-256")
+        .digest(listOf(title, text, bigText).joinToString("") { "${it.length}:$it" }.toByteArray(Charsets.UTF_8))
+        .joinToString("") { "%02x".format(it) }
+
     companion object {
-        private const val DUPLICATE_WINDOW_MS = 500L
         private const val MAX_RECENT_EVENTS = 512
     }
 }

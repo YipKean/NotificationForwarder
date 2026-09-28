@@ -6,7 +6,11 @@
   "scripts": {
     "start": "node server.js",
     "dev": "node --watch server.js",
-    "test": "node --test"
+    "test": "node --test",
+    "process:once": "node hermes-worker.js --once",
+    "process:watch": "node hermes-worker.js --watch",
+    "process:status": "node hermes-worker.js --status",
+    "process:results": "node hermes-worker.js --results"
   },
   "keywords": [
     "webhook",

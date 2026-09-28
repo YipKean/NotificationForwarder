@@ -8,7 +8,7 @@ Windows / PowerShell guide for building Notification Forwarder and testing it on
 - Minimum phone version: Android 8.0 (API 26).
 - On 2026-09-16, the user reported completing the build/setup commands and installing the app on their phone. They explicitly confirmed that the Discord webhook worked and a notification was forwarded successfully with Instagram configured as the test source (`com.instagram.android`). This is user-confirmed device evidence; build/lint logs were not captured by the agent.
 - The earlier missing-Java blocker was superseded after switching environments: Android Studio's bundled Java 21.0.6 and Android SDK 36 were found locally. The documented AGP/SDK compatibility gap below and the full device acceptance checklist have not been independently cleared.
-- The local SQLite receiver passed 17 automated tests and parent review. Phone-to-local-receiver HTTPS delivery and old-laptop deployment are still pending. See the [laptop handoff](PROJECT.md#windows-laptop-handoff).
+- The local SQLite receiver passed its automated tests and parent review. The user has since confirmed old-laptop deployment, ngrok HTTPS delivery, and automatic Hermes processing of synthetic receipts. The full Android background/recovery checklist remains outstanding. See the [laptop handoff](PROJECT.md#windows-laptop-handoff).
 - This installs separately from `com.itsazni.notificationforwarder`. Settings, queue data and notification access do not transfer. Disable forwarding in the old app before testing the new one.
 
 ## 1. Prepare the Windows build tools
@@ -81,7 +81,7 @@ Saving changes to delivery settings clears pending notifications and disables fo
 
 ## 5. Receiver requirements
 
-For Hermes, configure an authenticated HTTPS route reachable from the phone. Match its route and bearer token in the app. Use synthetic notifications until receipt and durable storage have both been verified.
+For Hermes, configure an authenticated HTTPS route reachable from the phone. Match its route and bearer token in the app. The verified laptop setup uses a temporary ngrok HTTPS tunnel to the loopback receiver; use synthetic notifications until the remaining security and reliability work is complete.
 
 The bundled `webhook/` server can check connectivity:
 
@@ -100,11 +100,39 @@ npm start
 
 This requires Node.js 24.13.0 or a later Node 24 patch and npm. The built-in SQLite module is marked experimental by Node and may print a warning. By default the server listens on `127.0.0.1:3000`, accepts authenticated `POST /webhook`, stores accepted payloads in `webhook/data/notifications.sqlite`, and provides `GET /health`. Put a phone-reachable HTTPS reverse proxy in front of it; the local HTTP listener alone is not a usable app endpoint. HTTPS hosting and certificate setup depend on your server environment.
 
-The receiver commits each accepted payload before returning success. It stores the generated receipt ID, UTC receipt time and validated JSON in SQLite, with separately authenticated read endpoints and no automatic deletion. Repeated deliveries currently create separate rows because the installed Android app has no persistent event ID. The database is not application-encrypted, so use this receiver for synthetic testing only until Hermes ingestion and deployment hardening are complete.
+The receiver requires schema v2 and UUID-v4 event IDs, commits each accepted payload before returning success, and atomically resolves retries by stable `WEBHOOK_SOURCE_ID` plus event ID. A same-content retry returns the original receipt with `duplicate: true`; changed content returns `409 event_id_conflict`. Sensitive security notifications are rejected with `422 sensitive_notification`. Leave the payload template blank for automatic v2 serialization, or use the complete [v2 template in README](README.md#custom-payload-template). The database is not application-encrypted, so use this receiver and worker for synthetic testing only until deployment hardening is complete.
+
+The optional dashboard read routes use a separate `DASHBOARD_BEARER_TOKEN` and return receipt lists, detail and app summaries. Reads are disabled when that token is absent. The receiver does not automatically delete stored events.
+
+### Coordinated ingestion upgrade
+
+These are deployment instructions; the implementation task does not execute them.
+
+1. Put the phone offline and force-stop the forwarder before replacing either component. **Do not switch forwarding off or save delivery-setting changes to pause it:** those actions intentionally clear pending content. Force-stop prevents new capture until reopening; notifications during that interval may not replay. Existing queue retention still applies.
+2. Stop the receiver and Hermes worker, including automatic supervision, and back up their SQLite database with services stopped. Preserve credentials and the source ID; do not put them in reports.
+3. Upgrade the receiver and phone together, preserving Android application data and the signing identity. Room migrates the existing encrypted queue; safe legacy items receive persisted IDs on access. Sensitive legacy items are discarded deliberately. Receiver migration preserves historical receipts and processing state without inventing historical event IDs.
+4. Keep the existing blank template. If upgrading a custom v1 template, drain the old queue against the old receiver first, then change the template with an empty queue; saving a new template while events are pending deletes them. The strict v2 receiver returns permanent validation failures to old senders.
+5. Start the upgraded services, reopen the upgraded app, reconnect, and verify synthetic rejection, expanded-text preservation and replay of one event ID returning the same receipt before regular use.
+
+For receiver rollback, stop services before restoring a backup; events accepted after that backup need separate reconciliation. Do not downgrade the Android app onto Room v2 data: the old app cannot open it. Prefer a forward fix with compatible v2 components. A deliberate Android reset or supported downgrade migration is outside this change.
 
 To move this receiver to another Windows machine, copy or clone the `webhook/` directory, install Node 24.13.0 or later within the Node 24 line, run `npm ci`, create `.env` from `.env.example` without overwriting an existing file, and set a new local bearer token and database path. Stop the receiver before copying an existing SQLite database. Keep the Node listener on localhost until a later HTTPS reverse-proxy setup is complete.
 
+### Optional Hermes processing for synthetic receipts
+
+The user has completed this synthetic step on the old Windows laptop. For a fresh
+machine, once phone delivery succeeds and the `finance-notifications` Hermes profile
+can reply, follow [the Hermes worker setup](webhook/HERMES_SETUP.md). The worker uses
+the profile's configured model, records draft classifications in SQLite, and
+keeps model processing separate from phone acknowledgement. It disables tools
+in that dedicated profile. Start with `npm run process:once`; after verifying the
+saved result, use `npm run process:watch`.
+
 ## 6. Phone acceptance checklist
+
+For automatic Windows sign-in startup and service recovery, see
+[the laptop startup guide](webhook/windows/README.md). The repository root includes
+double-click Start, Stop and Install Startup commands.
 
 Generate a new notification from the allowlisted test app for each case, using distinct text such as `Forwarder test 001`. Existing notifications are not a reliable capture test. Record receiver timestamps and the app's queue counters.
 
@@ -136,6 +164,12 @@ WorkManager retries are scheduled, so reconnection need not deliver immediately.
 | Duplicate forwarding | Old app still active, repeated notification updates or a receiver needing deduplication. |
 
 ## Test record
+
+Latest user-reported result: webhook receipt testing succeeded ("Tested. Looks good")
+after instructions to compare `npm run process:status` before/after a harmless
+notification and inspect `npm run process:results` from `webhook/`. Exact counts
+and output were not supplied. This does not independently confirm reboot/sign-in,
+sleep/resume, or resolution of previously failed Hermes processing records.
 
 - Build date / commit:
 - Build and lint result:

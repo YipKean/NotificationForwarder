@@ -17,7 +17,7 @@ class QueueConverters {
 
 @Entity(
     tableName = "notification_queue",
-    indices = [Index(value = ["notificationKeyDigest"], unique = true)]
+    indices = [Index(value = ["notificationKeyDigest"], unique = false)]
 )
 data class QueueItem(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,

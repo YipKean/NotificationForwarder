@@ -5,6 +5,7 @@ import android.provider.Settings
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 import com.notificationforwarder.app.data.NotificationRepository
+import com.notificationforwarder.app.data.RetryPolicy
 import com.notificationforwarder.app.network.PreparedWebhookRequest
 import com.notificationforwarder.app.network.SendResult
 import com.notificationforwarder.app.network.WebhookClient
@@ -35,11 +36,10 @@ class QueueWorker(
 
         val itemIds = repository.getPending(initial.batchSize).map { it.id }
         if (itemIds.isEmpty()) {
-            return Result.success()
+            return continuationResult(minimumDelayMillis = 30_000)
         }
 
         repository.markSending(itemIds)
-        var shouldRetry = false
         itemIds.forEach { id ->
             val plan = DeliveryCoordinator.withState {
                 val current = settings.readAll()
@@ -92,34 +92,41 @@ class QueueWorker(
                     if (result.success) {
                         repository.markSent(id)
                     } else {
-                        val attempt = plan.attemptCount + 1
                         repository.markFailure(
                             id = id,
-                            attemptCount = if (result.isPermanentFailure) plan.maxRetries else attempt,
+                            attemptCount = RetryPolicy.nextAttempt(plan.attemptCount),
                             maxRetry = plan.maxRetries,
-                            errorCode = result.message
+                            errorCode = result.message,
+                            permanent = result.isPermanentFailure
                         )
-                        if (!result.isPermanentFailure) {
-                            shouldRetry = true
-                        }
                     }
                 }
                 is DeliveryPlan.Rejected -> {
                     repository.markFailure(
                         id = id,
-                        attemptCount = if (plan.result.isPermanentFailure) plan.maxRetries else plan.attemptCount + 1,
+                        attemptCount = RetryPolicy.nextAttempt(plan.attemptCount),
                         maxRetry = plan.maxRetries,
-                        errorCode = plan.result.message
+                        errorCode = plan.result.message,
+                        permanent = plan.result.isPermanentFailure
                     )
-                    if (!plan.result.isPermanentFailure) {
-                        shouldRetry = true
-                    }
                 }
                 null -> Unit
             }
         }
 
-        return if (shouldRetry) Result.retry() else Result.success()
+        return continuationResult()
+    }
+
+    private suspend fun continuationResult(minimumDelayMillis: Long = 1_000): Result = DeliveryCoordinator.withState {
+        // Include delayed rows and serialize scheduling with policy cancellation.
+        val current = settings.readAll()
+        if (current.forwardingEnabled && current.webhookUrl.isNotBlank()) {
+            repository.nextPendingAtLocked()?.let { next ->
+                // A migration write can fail while a row stays due. Avoid a hot loop.
+                WorkerScheduler.enqueueContinuation(applicationContext, id, (next - System.currentTimeMillis()).coerceAtLeast(minimumDelayMillis))
+            }
+        }
+        Result.success()
     }
 
     private fun deviceId(): String = Settings.Secure.getString(

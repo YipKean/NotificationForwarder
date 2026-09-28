@@ -25,7 +25,14 @@ AGENTS.md
 .env
 .env.*
 
-# Local graph caches and receiver tooling
+# Graphify local caches and machine-specific state (portable graph outputs stay tracked)
 graphify-out/cache/
-graphify-out/.graphify*
-webhook/windows/
+graphify-out/.graphify_python
+graphify-out/.graphify_root
+graphify-out/.graphify_labels.json.sig
+graphify-out/.graphify_*.json
+!graphify-out/.graphify_analysis.json
+!graphify-out/.graphify_labels.json
+graphify-out/.graphify_*.txt
+graphify-out/.needs_update
+graphify-out/20??-??-??/

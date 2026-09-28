@@ -12,6 +12,12 @@ abstract class QueueDao {
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     abstract suspend fun insert(item: QueueItem): Long
 
+    @Query("SELECT * FROM notification_queue WHERE notificationKeyDigest = :digest")
+    abstract suspend fun findByNotificationKeyDigest(digest: String): List<QueueItem>
+
+    @Query("UPDATE notification_queue SET encryptedPayload = :payload, iv = :iv, encryptionVersion = :version, updatedAt = :updatedAt WHERE id = :id")
+    abstract suspend fun updateCiphertext(id: Long, payload: String, iv: String, version: Int, updatedAt: Long = System.currentTimeMillis()): Int
+
     @Query("SELECT * FROM notification_queue WHERE status = 'PENDING' AND nextRetryAt <= :now AND (expiresAt IS NULL OR expiresAt > :now) ORDER BY createdAt ASC LIMIT :limit")
     abstract suspend fun getPending(now: Long, limit: Int): List<QueueItem>
 
@@ -23,6 +29,12 @@ abstract class QueueDao {
 
     @Query("SELECT COUNT(*) FROM notification_queue")
     abstract suspend fun countRows(): Int
+
+    @Query("SELECT EXISTS(SELECT 1 FROM notification_queue WHERE status = 'PENDING')")
+    abstract suspend fun hasPending(): Boolean
+
+    @Query("SELECT MIN(nextRetryAt) FROM notification_queue WHERE status = 'PENDING'")
+    abstract suspend fun nextPendingAt(): Long?
 
     @Query("UPDATE notification_queue SET status = 'PENDING', updatedAt = :now WHERE status = 'SENDING' AND (expiresAt IS NULL OR expiresAt > :now)")
     abstract suspend fun recoverSending(now: Long)

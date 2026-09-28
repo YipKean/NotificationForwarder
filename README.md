@@ -37,9 +37,9 @@ The historical Graphify snapshots under `graphify-out/` retain source paths from
 
 ## Webhook Configuration
 
-Forwarding starts disabled after the security upgrade. Add at least one package to the allowlist and configure an HTTPS webhook before enabling it. Retry retention can be set from 1–24 hours or `OFF` for manual clearing; delivered, permanently failed and expired notification content is deleted.
+Forwarding starts disabled after the security upgrade. Add at least one package to the allowlist and configure an HTTPS webhook before enabling it. Retry retention can be set from 1–24 hours or `OFF` to disable expiry; delivered, permanently failed and expired notification content is deleted. Temporary network, 5xx and 429 failures remain encrypted and retry until expiry. **Backoff growth limit** caps delay growth, not the number of attempts; the delay caps at 32 minutes plus up to four seconds of jitter. Each completed batch schedules remaining pending work automatically, subject to Android background scheduling.
 
-The first launch after upgrading removes the legacy plaintext queue and keeps webhook settings while requiring forwarding to be enabled again. Existing backups created by older versions are not removed by the app.
+The earlier security upgrade removes the legacy plaintext queue and keeps webhook settings while requiring forwarding to be enabled again. The ingestion-hardening upgrade preserves the existing encrypted queue, filters legacy items and persists missing event IDs before delivery. Existing backups created by older versions are not removed by the app.
 
 ### Supported HTTP Methods
 - `GET` — no request body, query params appended to URL
@@ -70,6 +70,24 @@ Available variables:
 - `{text}`
 - `{postedAt}`
 - `{notificationKey}`
+- `{eventId}` (quoted string), `{bigText}` (quoted string), and `{bigTextJson}` (JSON string or `null`)
+
+The blank template emits schema v2 automatically. For the local receiver, this custom template omits device ID and the raw notification key:
+
+```json
+{
+  "schemaVersion": 2,
+  "eventId": "{eventId}",
+  "packageName": "{packageName}",
+  "appName": "{appName}",
+  "title": "{title}",
+  "text": "{text}",
+  "bigText": {bigTextJson},
+  "postedAt": {postedAt}
+}
+```
+
+Leave `{bigTextJson}` and `{postedAt}` unquoted. Use `"{bigText}"` when a destination requires a string (absent expanded text becomes `""`). Replacements run once, so literal placeholder-like notification text survives unchanged. Existing custom templates are not rewritten automatically; changing the saved template clears pending items under the existing security policy.
 
 #### Example: Telegram Bot API
 - URL: `https://api.telegram.org/bot<token>/sendMessage`
@@ -98,7 +116,9 @@ msg={title}
 
 ## Local Webhook API (`webhook/`)
 
-This repository includes a Node.js webhook receiver in `webhook/` for synthetic local testing. It authenticates requests and stores accepted notification payloads in a local SQLite database before acknowledging them.
+This repository includes a Node.js webhook receiver in `webhook/` for synthetic local testing. It authenticates requests and stores accepted notification payloads in a local SQLite database before acknowledging them. An optional Hermes worker then classifies saved synthetic receipts asynchronously through a dedicated Hermes profile.
+
+The receiver requires schema v2 and UUID-v4 event IDs. Matching source/event retries return the original receipt; different content under the same ID returns `409`. OTP/TAC, login/device-verification and approval/security notices are rejected before storage with `422`. Filtering runs on Android before queueing too, including expanded text. This is transport deduplication, not financial transaction deduplication. Keep `WEBHOOK_SOURCE_ID` unchanged when rotating the bearer token. See [coordinated upgrade steps](SETUP.md#coordinated-ingestion-upgrade).
 
 The browser UI lives in the independent `general-data-dashboard` project. It connects over HTTP; this repository contains only the receiver side of that integration.
 
@@ -135,6 +155,7 @@ Environment config (`webhook/.env`):
 | `DASHBOARD_BEARER_TOKEN` | Optional read token, distinct from the ingestion token |
 | `JSON_LIMIT` | Max JSON body size |
 | `DATABASE_PATH` | SQLite path; relative paths resolve from `webhook/` |
+| `WEBHOOK_SOURCE_ID` | Stable authenticated sender identity (defaults to `personal-phone`) |
 
 The receiver must be deployed behind an HTTPS reverse proxy for any non-local use, with its upstream port inaccessible from the public network. Configure the proxy to disable access logging. The receiver writes only a generated receipt ID, timestamp and outcome to stdout. SQLite files are local synthetic-test storage and are ignored by Git; stop the receiver before copying an existing database to another machine.
 
@@ -148,6 +169,19 @@ notifications.example.com {
     reverse_proxy 127.0.0.1:3000
 }
 ```
+
+### Hermes processing worker
+
+After the receiver is running and the `finance-notifications` Hermes profile is configured, use:
+
+```powershell
+npm run process:status
+npm run process:once
+npm run process:results
+npm run process:watch
+```
+
+The worker stores draft classifications and retry state in the local SQLite database. It uses the profile's configured model (Luna on the verified laptop), disables tools in that dedicated profile, and validates the entire quiet response as JSON. It is an at-least-once synthetic classifier, not a finance ledger; sensitive-content filtering, persistent event IDs, event deduplication and storage protection remain required before banking use. See [webhook/HERMES_SETUP.md](webhook/HERMES_SETUP.md).
 
 ## Screenshots
 

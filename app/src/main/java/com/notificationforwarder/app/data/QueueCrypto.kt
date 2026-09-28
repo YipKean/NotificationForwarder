@@ -5,6 +5,7 @@ import android.security.keystore.KeyPermanentlyInvalidatedException
 import android.security.keystore.KeyProperties
 import android.util.Base64
 import com.google.gson.Gson
+import com.google.gson.JsonParser
 import java.nio.charset.StandardCharsets
 import java.security.KeyStore
 import java.security.UnrecoverableKeyException
@@ -30,10 +31,11 @@ object QueueCrypto {
 
     private val gson = Gson()
 
-    fun encrypt(payload: NotificationPayload): EncryptedQueuePayload {
+    fun encrypt(payload: NotificationPayload, requireExistingKey: Boolean = false): EncryptedQueuePayload {
         try {
             val cipher = Cipher.getInstance(TRANSFORMATION)
-            cipher.init(Cipher.ENCRYPT_MODE, getOrCreateKey())
+            val key = if (requireExistingKey) getExistingKey() ?: throw QueueKeyMissingException() else getOrCreateKey()
+            cipher.init(Cipher.ENCRYPT_MODE, key)
             cipher.updateAAD(FORMAT_VERSION.toString().toByteArray(StandardCharsets.UTF_8))
             val encrypted = cipher.doFinal(gson.toJson(payload).toByteArray(StandardCharsets.UTF_8))
             return EncryptedQueuePayload(
@@ -58,7 +60,7 @@ object QueueCrypto {
             )
             cipher.updateAAD(FORMAT_VERSION.toString().toByteArray(StandardCharsets.UTF_8))
             val plaintext = cipher.doFinal(Base64.decode(item.encryptedPayload, Base64.NO_WRAP))
-            return gson.fromJson(String(plaintext, StandardCharsets.UTF_8), NotificationPayload::class.java)
+            return decodePayload(String(plaintext, StandardCharsets.UTF_8))
         } catch (e: QueueKeyMissingException) {
             throw e
         } catch (_: KeyPermanentlyInvalidatedException) {
@@ -70,6 +72,26 @@ object QueueCrypto {
         } catch (_: Exception) {
             throw QueuePayloadCorruptException()
         }
+    }
+
+    internal fun decodePayload(json: String): NotificationPayload {
+        val root = JsonParser.parseString(json).asJsonObject
+        fun string(name: String): String {
+            val value = root.get(name) ?: throw QueuePayloadCorruptException()
+            if (!value.isJsonPrimitive || !value.asJsonPrimitive.isString) throw QueuePayloadCorruptException()
+            return value.asString
+        }
+        fun optionalString(name: String): String? =
+            if (!root.has(name) || root.get(name).isJsonNull) null else string(name)
+        val postedAt = root.get("postedAt") ?: throw QueuePayloadCorruptException()
+        if (!postedAt.isJsonPrimitive || !postedAt.asJsonPrimitive.isNumber) throw QueuePayloadCorruptException()
+        val timestamp = postedAt.asBigDecimal.longValueExact()
+        if (timestamp < 0) throw QueuePayloadCorruptException()
+        return NotificationPayload(
+            packageName = string("packageName"), appName = string("appName"), title = string("title"),
+            text = string("text"), postedAt = timestamp,
+            notificationKey = string("notificationKey"), bigText = optionalString("bigText"), eventId = optionalString("eventId")
+        )
     }
 
     fun hasUsableKey(): Boolean {

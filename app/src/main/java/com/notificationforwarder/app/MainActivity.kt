@@ -43,12 +43,19 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Snackbar
+import androidx.compose.material3.SnackbarDuration
+import androidx.compose.material3.SwipeToDismissBox
+import androidx.compose.material3.SwipeToDismissBoxValue
+import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.key
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -65,6 +72,7 @@ import com.notificationforwarder.app.data.NotificationPayload
 import com.notificationforwarder.app.data.QueueEntry
 import com.notificationforwarder.app.data.QueueStats
 import com.notificationforwarder.app.data.QueueStatus
+import java.util.UUID
 import com.notificationforwarder.app.network.WebhookClient
 import com.notificationforwarder.app.settings.AppSettings
 import com.notificationforwarder.app.settings.AuthMode
@@ -77,6 +85,9 @@ import com.notificationforwarder.app.worker.WorkerScheduler
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.receiveAsFlow
 
 private enum class AppTab(val label: String, val icon: ImageVector) {
     HOME("Home", Icons.Filled.Home),
@@ -142,6 +153,21 @@ private fun MainScreen(settingsStore: SettingsStore) {
     val scope = rememberCoroutineScope()
     val repository = remember { NotificationRepository(context) }
     val snackbarHostState = remember { SnackbarHostState() }
+    val snackbarMessages = remember { Channel<String>(Channel.CONFLATED) }
+
+    DisposableEffect(snackbarMessages) {
+        onDispose { snackbarMessages.close() }
+    }
+    LaunchedEffect(snackbarHostState, snackbarMessages) {
+        snackbarMessages.receiveAsFlow().collectLatest { message ->
+            // Cancel only the previous message, never the save or network operation.
+            snackbarHostState.showSnackbar(
+                message = message,
+                withDismissAction = true,
+                duration = SnackbarDuration.Short
+            )
+        }
+    }
 
     var selectedTab by remember { mutableStateOf(AppTab.HOME) }
     var uiSettings by remember { mutableStateOf(settingsStore.readAll().toUiSettings()) }
@@ -153,7 +179,21 @@ private fun MainScreen(settingsStore: SettingsStore) {
 
     Scaffold(
         topBar = { TopAppBar(title = { Text("Notification Forwarder") }) },
-        snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
+        snackbarHost = {
+            SnackbarHost(hostState = snackbarHostState) { data ->
+                key(data) {
+                    val dismissState = rememberSwipeToDismissBoxState(
+                        confirmValueChange = { value ->
+                            if (value != SwipeToDismissBoxValue.Settled) data.dismiss()
+                            true
+                        }
+                    )
+                    SwipeToDismissBox(state = dismissState, backgroundContent = {}) {
+                        Snackbar(snackbarData = data)
+                    }
+                }
+            }
+        },
         bottomBar = {
             NavigationBar(
                 containerColor = MaterialTheme.colorScheme.surfaceVariant,
@@ -188,17 +228,17 @@ private fun MainScreen(settingsStore: SettingsStore) {
                     scope.launch {
                         val result = saveSettingsCoordinated(context, settingsStore, repository, uiSettings)
                         if (!result.success) {
-                            snackbarHostState.showSnackbar("Settings not saved: ${result.errorCode}")
+                            snackbarMessages.trySend("Settings not saved: ${result.errorCode}")
                             return@launch
                         }
                         if (result.policyChanged) {
                             uiSettings = uiSettings.copy(forwardingEnabled = false)
-                            snackbarHostState.showSnackbar("Settings changed; forwarding disabled and queue cleared")
+                            snackbarMessages.trySend("Settings changed; forwarding disabled and queue cleared")
                         } else if (result.retentionChanged) {
-                            snackbarHostState.showSnackbar("Retention updated")
+                            snackbarMessages.trySend("Retention updated")
                         } else {
                             WorkerScheduler.enqueueImmediate(context)
-                            snackbarHostState.showSnackbar(
+                            snackbarMessages.trySend(
                                 if (settingsStore.forwardingEnabled) "Webhook settings saved"
                                 else "Settings saved; forwarding remains disabled until a valid HTTPS endpoint and allowlist are configured."
                             )
@@ -225,8 +265,10 @@ private fun MainScreen(settingsStore: SettingsStore) {
                                         appName = "Webhook Test",
                                         title = "Test Notification",
                                         text = "This is a test payload",
-                                        postedAt = System.currentTimeMillis(),
-                                        notificationKey = "test-${System.currentTimeMillis()}"
+                                         postedAt = System.currentTimeMillis(),
+                                         notificationKey = "test-${System.currentTimeMillis()}",
+                                         bigText = null,
+                                         eventId = UUID.randomUUID().toString()
                                     ),
                                     deviceId = "test-device"
                                 ).also { request ->
@@ -247,7 +289,7 @@ private fun MainScreen(settingsStore: SettingsStore) {
                                 }
                             }
                         }
-                        snackbarHostState.showSnackbar(
+                        snackbarMessages.trySend(
                             if (result.success) "Webhook test success" else "Webhook test failed: ${result.message}"
                         )
                     }
@@ -264,16 +306,16 @@ private fun MainScreen(settingsStore: SettingsStore) {
                     scope.launch {
                         val result = saveSettingsCoordinated(context, settingsStore, repository, uiSettings)
                         if (!result.success) {
-                            snackbarHostState.showSnackbar("Settings not saved: ${result.errorCode}")
+                            snackbarMessages.trySend("Settings not saved: ${result.errorCode}")
                             return@launch
                         }
                         if (result.policyChanged) {
                             uiSettings = uiSettings.copy(forwardingEnabled = false)
-                            snackbarHostState.showSnackbar("Settings changed; forwarding disabled and queue cleared")
+                            snackbarMessages.trySend("Settings changed; forwarding disabled and queue cleared")
                         } else if (result.retentionChanged) {
-                            snackbarHostState.showSnackbar("Retention updated")
+                            snackbarMessages.trySend("Retention updated")
                         } else {
-                            snackbarHostState.showSnackbar(
+                            snackbarMessages.trySend(
                                 if (settingsStore.forwardingEnabled) "Filter & retry settings saved"
                                 else "Settings saved; forwarding remains disabled until a valid HTTPS endpoint and allowlist are configured."
                             )
@@ -295,7 +337,7 @@ private fun MainScreen(settingsStore: SettingsStore) {
                         }
                         WorkerScheduler.cancelDelivery(context)
                         WorkerScheduler.ensurePeriodic(context)
-                        snackbarHostState.showSnackbar("Queue item deleted")
+                        snackbarMessages.trySend("Queue item deleted")
                     }
                 },
                 onClearQueue = {
@@ -306,7 +348,7 @@ private fun MainScreen(settingsStore: SettingsStore) {
                         }
                         WorkerScheduler.cancelDelivery(context)
                         WorkerScheduler.ensurePeriodic(context)
-                        snackbarHostState.showSnackbar("Queue cleared")
+                        snackbarMessages.trySend("Queue cleared")
                     }
                 }
             )
@@ -317,7 +359,7 @@ private fun MainScreen(settingsStore: SettingsStore) {
         repository.purgeExpired()
         WorkerScheduler.ensurePeriodic(context)
         if (settingsStore.consumePurgeNotice()) {
-            snackbarHostState.showSnackbar("Security upgrade cleared legacy notification history. Add an allowlisted package and enable forwarding to resume.")
+            snackbarMessages.trySend("Security upgrade cleared legacy notification history. Add an allowlisted package and enable forwarding to resume.")
         }
     }
 }
@@ -582,7 +624,8 @@ private fun FilterScreen(
                         onValueChange = {
                             onSettingsChange(uiSettings.copy(maxRetriesRaw = it.filter { c -> c.isDigit() }))
                         },
-                        label = { Text("Max retries") },
+                        label = { Text("Backoff growth limit") },
+                        supportingText = { Text("Attempts before delay stops growing (1–20). Temporary failures retry until expiry.") },
                         singleLine = true
                     )
 

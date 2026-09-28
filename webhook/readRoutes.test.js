@@ -13,6 +13,11 @@ async function serve( storage, overrides, run ) {
 	const server = createApp( { storage, config: { ...config, ...overrides } } ).listen( 0, "127.0.0.1" );
 	await new Promise( resolve => server.once( "listening", resolve ) );
 	const read = ( path, token = "reader-test" ) => fetch( `http://127.0.0.1:${server.address().port}${path}`, { headers: token ? { Authorization: `Bearer ${token}` } : {} } );
+	read.ingest = payload => fetch( `http://127.0.0.1:${server.address().port}/webhook`, {
+		method: "POST",
+		headers: { Authorization: "Bearer ingestion-test", "Content-Type": "application/json" },
+		body: JSON.stringify( payload )
+	} );
 	try { await run( read ); } finally { await new Promise( resolve => server.close( resolve ) ); }
 }
 test( "read authorization is separate, fails closed and never caches", async () => {
@@ -28,6 +33,36 @@ test( "read authorization is separate, fails closed and never caches", async () 
 	await serve( null, { dashboardToken: "" }, async read => assert.equal( ( await read( "/api/notifications" ) ).status, 503 ) );
 	assert.equal( validateConfig( { ...config, dashboardToken: config.bearerToken } ), false );
 	assert.equal( validateConfig( { ...config, webhookPath: "/api/notifications" } ), false );
+} );
+test( "schema-v2 ingestion appears in the authenticated read API once after a retry", async () => {
+	const directory = mkdtempSync( join( tmpdir(), "dashboard-ingestion-" ) );
+	const store = openNotificationStore( join( directory, "events.sqlite" ) );
+	const event = {
+		schemaVersion: 2,
+		eventId: randomUUID(),
+		packageName: "test.app",
+		appName: "Test",
+		title: "Synthetic payment",
+		text: "MYR 12.30 paid",
+		bigText: "MYR 12.30 paid to Sample Shop",
+		postedAt: 1789441200000
+	};
+	try {
+		await serve( store, { sourceId: "personal-phone" }, async read => {
+			const first = await read.ingest( event );
+			assert.equal( first.status, 200 );
+			const { receiptId } = await first.json();
+			const retry = await read.ingest( event );
+			assert.equal( retry.status, 200 );
+			assert.deepEqual( await retry.json(), { ok: true, message: "Webhook received.", receiptId, duplicate: true } );
+			const list = await ( await read( "/api/notifications" ) ).json();
+			assert.equal( list.items.length, 1 );
+			assert.equal( list.items[ 0 ].receiptId, receiptId );
+			assert.equal( list.items[ 0 ].packageName, event.packageName );
+			const detail = await ( await read( `/api/notifications/${receiptId}` ) ).json();
+			assert.equal( detail.text, event.text );
+		} );
+	} finally { store.close(); }
 } );
 test( "legacy upgrade preserves data, stable cursors, projection, filtering and backup", async () => {
 	const directory = mkdtempSync( join( tmpdir(), "dashboard-store-" ) );

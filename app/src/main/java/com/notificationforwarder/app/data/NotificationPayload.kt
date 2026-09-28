@@ -6,5 +6,7 @@ data class NotificationPayload(
     val title: String,
     val text: String,
     val postedAt: Long,
-    val notificationKey: String
+    val notificationKey: String,
+    val bigText: String? = null,
+    val eventId: String? = null
 )
